@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+:root {
+  --foreground: oklch(87.2% 0.01 258.338);
+  --background: oklch(21% 0.034 264.665);
+}
+
+@theme inline {
+  --color-fg: var(--foreground);
+  --color-fg-2: color-mix(in oklch, var(--foreground) 75%, var(--background));
+  --color-fg-3: color-mix(in oklch, var(--foreground) 50%, var(--background));
+  --color-fg-4: color-mix(in oklch, var(--foreground) 25%, var(--background));
+
+  --color-bg: var(--background);
+  --color-bg-2: color-mix(in oklch, var(--background) 90%, var(--foreground));
+  --color-bg-3: color-mix(in oklch, var(--background) 80%, var(--foreground));
+  --color-bg-4: color-mix(in oklch, var(--background) 70%, var(--foreground));
+}
+
+@layer components {
+  .button {
+    @apply rounded p-1 px-4 bg-bg-4 text-fg text-sm;
+
+    &:hover {
+      background-color: color-mix(in oklab, var(--color-bg-4), white 5%);
+      @apply bg-bg-3 cursor-pointer;
+    }
+  }
+}
