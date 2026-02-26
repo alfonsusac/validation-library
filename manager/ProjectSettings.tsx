@@ -2,7 +2,7 @@ import { startTransition, useActionState, useEffect, useRef, useState, type Chan
 import type { PackageJson } from "./lib/package-json"
 import { usePackageJson } from "./App"
 import { jsonfetch } from "./lib/fetch"
-import { packageJsonParser } from "./lib/validations-package-json"
+import { packageJsonParser } from "./lib/package-json-validations"
 import { cn } from "lazy-cn"
 
 export function ProjectSettings(props: {
@@ -106,10 +106,9 @@ const BasicField = <T,>({
 }) => {
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const clearButton = <button onClick={onClear}
-    className="button ghost text-xs py-0 text-fg4 hover:text-fg3"
-  >
+  const clearButton = <button onClick={onClear} className="button ghost text-xs py-0 text-fg4 hover:text-fg3">
     Clear
+    {/* Delete */}
   </button>
 
   const onInputEnter = (e: KeyboardEvent) => {
@@ -149,7 +148,7 @@ const BasicField = <T,>({
             <button
               disabled={!resettable}
               className="button text-xs ghost" onClick={() => reset()}>
-              Reset
+              Revert
             </button>
             <button
               disabled={!saveable}
@@ -368,8 +367,10 @@ const ListInput = (props: Omit<ComponentProps<"input">, 'value' | 'onChange'> & 
 
 function ProjectKeywordsInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson(true)
-  const field = useField(packageJson.keywords ?? [], {
+  const field = useField(packageJson.keywords, {
     validate: (value) => packageJsonParser.keywords.validate(value),
+    clearable: true,
+    defaultData: () => [],
   })
   return <div>
     <BasicField
@@ -380,16 +381,10 @@ function ProjectKeywordsInput() {
         newPackageJson.keywords = newKeywords
         updatePackageJson(newPackageJson)
       }}
-      hideFooter={true}
       renderInput={() =>
         <ListInput
-          value={field.value}
-          onChange={(newValue) => {
-            updatePackageJson({
-              ...packageJson,
-              keywords: newValue
-            })
-          }}
+          value={field.value ?? []}
+          onChange={field.setValue}
         />
       }
       description="An array of keywords that describe the package. Helps people discover your package, as it's listed in `npm search`."
@@ -446,7 +441,6 @@ function ProjectBugsInput() {
     <LucideX />
   </button>
 
-
   const url = typeof field.value === "string" ? field.value : field.value?.url
   const email = typeof field.value === "string" ? undefined : field.value?.email
 
@@ -497,7 +491,19 @@ function ProjectBugsInput() {
             }
           </div>
         </div>}
-      description="The URL to the project's issue tracker."
+      description="The URL to the project's issue tracker. If a URL is provided, it will be used by the `npm bugs` command."
     />
   </div>
+}
+
+
+function ProjectLicenseInput() {
+  // Requirements:
+  // - [ ] no license means "All rights reserved"
+  // - [ ] error: must uses SPDX license identifier (fetch list)
+  // - [ ] warn: consider using one that are OSI approvied
+  // - [ ] error: multiple must follow SPDX format (e.g. MIT OR Apache-2.0)
+  // - [ ] support for custom license file (e.g. "SEE LICENSE IN LICENSE.txt")
+  // - [ ] only allow max 2 licenses because SPDX format for multiple licenses is hard to parse and validate, and it's uncommon to have more than 2 licenses. If more than 2 licenses are needed, users can use a custom license file.
+  // - [ ] allow unlicensed
 }

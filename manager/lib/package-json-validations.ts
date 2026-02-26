@@ -52,6 +52,8 @@ export const packageJsonParser = {
   },
   keywords: {
     validate: (value: unknown) => {
+      if (typeof value === "undefined")
+        return
       if (!Array.isArray(value))
         return "keywords must be an array"
       for (const keyword of value) {

@@ -26,11 +26,14 @@
     "react-dom": "^19.2.4",
     "tailwindcss": "^4.2.1"
   },
+  "homepage": "https://alfon.dev",
   "keywords": [
-    "js",
-    "validator",
     "react",
-    "parser"
+    "rs",
+    "parser",
+    "ts"
   ],
-  "homepage": "https://alfon.dev"
+  "bugs": {
+    "url": "https://www.google.com"
+  }
 }
