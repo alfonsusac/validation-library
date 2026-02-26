@@ -1,4 +1,4 @@
-import type { PackageJson } from "./event-package-json"
+import type { PackageJson } from "./package-json"
 
 export type WSEventMap = {
   [ emitName: string ]: (...args: any[]) => any

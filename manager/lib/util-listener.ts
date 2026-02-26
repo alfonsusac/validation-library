@@ -5,10 +5,16 @@ export class Listener<Data>{
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
   }
-
+  remove(listener: (data: Data) => void) {
+    this.listeners.delete(listener)
+  }
 
   emit(data: Data) {
     this.listeners.forEach(listener => listener(data))
+  }
+
+  length() {
+    return this.listeners.size
   }
 
   clear() {

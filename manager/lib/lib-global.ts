@@ -6,6 +6,7 @@ export function global<T>(
   init: () => T,
   onHmrDispose?: (value: T) => void,
 ) {
+  // console.log("initializing global variable: ", name)
   // not checking yet if names exists
   const symbol = Symbol.for(name)
   const globl = globalThis as any
@@ -21,6 +22,7 @@ export function global<T>(
   if (import.meta.hot && onHmrDispose) {
     // Yet to test if this works or improves anything.
     import.meta.hot.dispose(() => {
+      // console.log(`Disposing global variable: ${ name }`)
       onHmrDispose(get())
       delete globl[ symbol ]
     })

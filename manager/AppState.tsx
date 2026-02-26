@@ -1,13 +1,7 @@
-import { useEffect, useSyncExternalStore } from "react"
-import type { PackageJson } from "./lib/event-package-json"
-import { Listener } from "./lib/util-listener"
-import { global } from "./lib/global"
+import { global } from "./lib/lib-global"
+import { createGlobalStore } from "./lib/react-store"
 
-type AppState = {
-  packageJson: PackageJson | null
-}
-
-const [ getWs, setWs ] = global<WebSocket>('__app_ws', () => {
+const [ getWs ] = global<WebSocket>('__app_ws', () => {
   const ws = new WebSocket("ws://localhost:3000/ws")
   ws.addEventListener("open", () => {
     console.log("WebSocket connected")
@@ -20,51 +14,6 @@ const [ getWs, setWs ] = global<WebSocket>('__app_ws', () => {
   getWs().close()
 })
 
-const useServerCount = createGlobalStore('count', () => 0)
-
-// const [ appState, setAppState ] = global<AppState>('__app_state', () => ({
-//   packageJson: null
-// }))
-// const [ listeners, setListeners ] = global<Listener<AppState>>('__app_listeners', () => new Listener())
-
-// export function useAppState() {
-//   return useSyncExternalStore(
-//     (listener) => listeners().add(listener),
-//     () => appState(),
-//   )
-// }
-
-
-
-
-// 
-
-function createGlobalStore<T>(
-  name: string,
-  init: () => T,
-) {
-  const [ getter ] = global(`__app_${ name }_store`, () => {
-    return ({
-      data: init(),
-      listeners: new Listener<T>()
-    })
-  })
-  function update(data: T) {
-    const store = getter()
-    store.data = data
-    store.listeners.emit(data)
-  }
-  function useStore() {
-    const data = useSyncExternalStore(
-      (listener) => getter().listeners.add(listener),
-      () => getter().data,
-    )
-    return [ data, update ] as const
-  }
-  const get = () => getter().data
-  return [ useStore, update, get ] as const
-}
-
 
 // The ws store concerns with populating store with data with less duplication as possible.
 // It must:
@@ -73,9 +22,10 @@ function createGlobalStore<T>(
 // - 3. request data update when update function called
 // - 4. get the latest store data if data is available on global store
 
-export function createWsStore<T>(name: string, cb: {
+export function appStore<T>(name: string, cb: {
   // Function to request data from server
   requestData: (ws: WebSocket) => void,
+  // Function to request data update to server
   requestUpdate: (ws: WebSocket, newData: T) => void,
   // Function to listen on server push data and return new data to update store, or undefined if not relevant
   onMessage: (event: Bun.BunMessageEvent<any>) => T | undefined,
@@ -84,6 +34,7 @@ export function createWsStore<T>(name: string, cb: {
   const [ useCachedStore, updateCachedStore, getCachedStore ] = createGlobalStore(name, () => null as T | null)
 
   function onWsStoreServerUpdate(event: Bun.BunMessageEvent<any>) {
+    // console.log("server message received!")
     const newData = cb.onMessage(event)
     if (newData !== undefined) updateCachedStore(newData)
   }
@@ -91,8 +42,12 @@ export function createWsStore<T>(name: string, cb: {
   getWs().addEventListener("message", onWsStoreServerUpdate)
   if (import.meta.hot) {
     import.meta.hot.on("bun:beforeUpdate", () => {
-      // console.log(`[createWsStore]: Disposing ws store for ${ name } a`)
       getWs().removeEventListener("message", onWsStoreServerUpdate)
+    })
+    // DO NOT FORGET to re-register the event listener after update, 
+    //  otherwise the store will not receive server push updates after HMR update.
+    import.meta.hot.on("bun:afterUpdate", () => {
+      getWs().addEventListener("message", onWsStoreServerUpdate)
     })
   }
 

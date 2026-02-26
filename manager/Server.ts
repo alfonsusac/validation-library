@@ -1,5 +1,4 @@
-import { loggerWsSchema } from "./lib/event-log"
-import { packageJson } from "./lib/event-package-json"
+import { packageJson } from "./lib/package-json"
 import root from "./root.html"
 
 
@@ -28,8 +27,7 @@ export const startManager = async () => {
         ws.unsubscribe("global")
       },
       message(ws, message) {
-        console.log("[ws-message]", message)
-        loggerWsSchema.handleMessage(ws, message)
+        console.log("[ws-message]", message.slice(0, 20)) // log first 20 chars for brevity
         packageJson.handleWsMessage(ws, message)
       },
     },
