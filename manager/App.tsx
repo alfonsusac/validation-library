@@ -16,6 +16,9 @@ export function App() {
       <h2 className="font-medium text-xl text-fg4">Project Settings</h2>
       {packageJSON ? <ProjectSettings packageJSON={packageJSON} /> : null}
 
+      <footer className="pt-20">
+
+      </footer>
     </div>
   )
 }

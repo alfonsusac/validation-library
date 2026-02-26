@@ -27,6 +27,10 @@
     "tailwindcss": "^4.2.1"
   },
   "keywords": [
-    "js"
-  ]
+    "js",
+    "validator",
+    "react",
+    "parser"
+  ],
+  "homepage": "https://alfon.dev"
 }

@@ -44,6 +44,8 @@ export const packageJsonParser = {
   },
   description: {
     validate: (value: unknown) => {
+      if (typeof value === "undefined")
+        return
       if (typeof value !== "string")
         return "description must be a string"
     }
@@ -55,6 +57,44 @@ export const packageJsonParser = {
       for (const keyword of value) {
         if (typeof keyword !== "string")
           return "keywords must be an array of strings"
+      }
+    }
+  },
+  homepage: {
+    validate: (value: unknown) => {
+      if (typeof value === "undefined")
+        return
+      if (typeof value !== "string")
+        return "homepage must be a string"
+      try {
+        new URL(value)
+      } catch {
+        return "homepage must be a valid URL"
+      }
+    }
+  },
+  bugs: {
+    validate: (value: unknown) => {
+      if (typeof value === "undefined") return
+      if (typeof value !== "object" && typeof value !== "string")
+        return "bugs must be an object or a string"
+      if (value === null)
+        return "bugs cannot be null"
+      if (typeof value === "object") {
+        if (!("url" in value) && !("email" in value))
+          return "bugs must have at least one of url or email"
+        if ("url" in value && value.url !== undefined && typeof value.url !== "string")
+          return "bugs.url must be a string"
+        if ("url" in value && value.url !== undefined && typeof value.url === "string") {
+          try {
+            new URL(value.url)
+          } catch {
+            return "bugs.url must be a valid URL"
+          }
+        }
+        if ("email" in value && value.email !== undefined && typeof value.email !== "string")
+          return "bugs.email must be a string"
+        // either one or both of url and email should be present
       }
     }
   }

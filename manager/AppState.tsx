@@ -28,12 +28,12 @@ export function appStore<T>(name: string, cb: {
   // Function to request data update to server
   requestUpdate: (ws: WebSocket, newData: T) => void,
   // Function to listen on server push data and return new data to update store, or undefined if not relevant
-  onMessage: (event: Bun.BunMessageEvent<any>) => T | undefined,
+  onMessage: (event: MessageEvent<any>) => T | undefined,
 }) {
   // Global Store
   const [ useCachedStore, updateCachedStore, getCachedStore ] = createGlobalStore(name, () => null as T | null)
 
-  function onWsStoreServerUpdate(event: Bun.BunMessageEvent<any>) {
+  function onWsStoreServerUpdate(this: WebSocket, event: MessageEvent<any>) {
     // console.log("server message received!")
     const newData = cb.onMessage(event)
     if (newData !== undefined) updateCachedStore(newData)

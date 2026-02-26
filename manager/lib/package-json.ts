@@ -6,6 +6,11 @@ export type PackageJson = {
   version: string,
   description?: string,
   keywords?: string[],
+  homepage?: string,
+  bugs?: {
+    url?: string,
+    email?: string,
+  } | string,
   dependencies?: Record<string, string>,
   devDependencies?: Record<string, string>,
 }

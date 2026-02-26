@@ -1,4 +1,4 @@
-import { startTransition, useActionState, useEffect, useRef, useState, type ComponentProps } from "react"
+import { startTransition, useActionState, useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent } from "react"
 import type { PackageJson } from "./lib/package-json"
 import { usePackageJson } from "./App"
 import { jsonfetch } from "./lib/fetch"
@@ -13,68 +13,131 @@ export function ProjectSettings(props: {
     <ProjectVersionInput />
     <ProjectDescriptionInput />
     <ProjectKeywordsInput />
+    <ProjectURLInput />
+    <ProjectBugsInput />
   </div>
 }
 
 const Label = (props: ComponentProps<"label">) => <label {...props} className={cn("text-xs text-fg2 px-2 block", props.className)} />
-const InputBlock = (props: ComponentProps<"div">) => <div {...props} className={cn("bg-bg2 pt-1 flex flex-col rounded outline-fg4 focus-within:outline-2 my-2", props.className)} />
-const InputBlockFooter = (props: ComponentProps<"div">) => <div {...props} className={cn("flex items-baseline gap-2 px-2 pb-2", props.className)} />
+const InputBlock = (props: ComponentProps<"div">) => <div {...props} className={cn("bg-bg2 p-1 flex flex-col rounded outline-fg4 focus-within:outline-2 my-2", props.className)} />
+const InputBlockFooter = (props: ComponentProps<"div">) => <div {...props} className={cn("flex items-baseline gap-2 p-1", props.className)} />
 const InputBlockMessage = (props: ComponentProps<"div">) => <div {...props} className={cn("text-xs text-fg3 grow", props.className)} />
 const InputDescription = (props: ComponentProps<"div">) => <div {...props} className={cn("text-xs text-fg3 px-2", props.className)} />
 
 const ErrorMessage = (props: { error: string | undefined }) => props.error === undefined ? null : <div className="text-error">{props.error}</div>
 const WarnMessages = (props: { warns: string[] }) => <div className="text-warning/25">{props.warns.map((warn, i) => <div key={i}>{warn}</div>)}</div>
-const Input = (props: ComponentProps<"input">) => <input {...props} className={cn("w-full text-fg rounded p-2 px-2.5 font-mono text-sm outline-none placeholder:text-fg4", props.className)} />
+const Input = (props: ComponentProps<"input">) => <input {...props} className={cn("w-full text-fg rounded p-1.5 px-2 font-mono text-sm outline-none placeholder:text-fg4", props.className)} />
+const InputWideButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost text-start hover:bg-bg3/50 flex items-center gap-1 px-2 py-1.5 grow", props.className)} />
+// function RadixIconsPlus(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 15 15" {...props}>{/* Icon from Radix Icons by WorkOS - https://github.com/radix-ui/icons/blob/master/LICENSE */}<path fill="currentColor" fillRule="evenodd" d="M8 2.75a.5.5 0 0 0-1 0V7H2.75a.5.5 0 0 0 0 1H7v4.25a.5.5 0 0 0 1 0V8h4.25a.5.5 0 0 0 0-1H8z" clipRule="evenodd" /></svg>) }
+function LucidePlus(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7-7v14" /></svg>) }
+function LucideX(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 6L6 18M6 6l12 12" /></svg>) }
 
-const useField = <T extends string | string[] | number>(initialData: T, opts: {
-  validate: (value: T) => string | undefined,
-  warn?: (value: T) => string[],
-}) => {
+const useField = <T extends any>(initialData: T, opts:
+  {
+    validate: (value: NoInfer<T>) => string | undefined,
+    warn?: (value: NoInfer<T>) => string[],
+    placeholder?: string,
+    equalityCheck?: (a: NoInfer<T>, b: NoInfer<T>) => boolean,
+  } & (
+    undefined extends NoInfer<T> ? {
+      clearable: boolean,
+      defaultData: () => NoInfer<T>
+    } : {
+      clearable?: undefined,
+      defaultData?: undefined
+    }
+  )
+) => {
   const [ value, setValue ] = useState(initialData)
   useEffect(() => setValue(initialData), [ JSON.stringify(initialData) ])
 
-  const isChanged = value !== initialData
+  const isChanged = opts.equalityCheck?.(value, initialData) ??
+    (typeof value === "object" && value !== null) ?
+    (JSON.stringify(value) !== JSON.stringify(initialData)) :
+    value !== initialData
   const error = opts.validate(value)
   const warns = opts.warn?.(value) || []
-
   const saveable = isChanged && error === undefined
-
   const resettable = isChanged
-
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue((e.target as any).value)
+    // only sets value of the state.
+    // if no need to use (e), just call setValue directly.
   }
-
   const reset = () => setValue(initialData)
 
+  // Undefined behavior
+  if (opts.clearable === true && opts.defaultData === undefined) {
+    const err = new Error("If clearable is true, defaultData must be provided")
+    Error.captureStackTrace?.(err, useField)
+    throw err
+  }
+  const exists = value === undefined ? false : true
+  const onClear = () => {
+    if (opts.clearable) {
+      setValue(undefined as T)
+    }
+  }
+  const onSetToNonUndefined = () => {
+    if (opts.clearable) {
+      const newValue = opts.defaultData ? opts.defaultData() : undefined
+      setValue(newValue as T)
+    }
+  }
+
   return {
-    value, setValue, isChanged, error, warns, saveable, onChange, resettable, reset
+    value, setValue, isChanged, error, warns, saveable, onChange,
+    resettable, reset, exists, clearable: opts.clearable, onClear, onSetToNonUndefined
   } as const
 }
 
-const BasicField = <T extends string | number | string[]>({
-  value, onChange, error, warns, saveable, onSave, resettable, reset, label, description, renderInput, hideFooter
+const BasicField = <T,>({
+  value, onChange, error, warns, saveable, onSave, resettable, reset, label, description, renderInput, hideFooter,
+  placeholder, clearable, onClear, exists, isChanged, onSetToNonUndefined
 }: ReturnType<typeof useField<T>> & {
   onSave: (value: T) => void,
   label: React.ReactNode,
   description?: React.ReactNode,
-  renderInput?: React.ReactNode,
-  hideFooter?: boolean
+  renderInput?: (props: {
+    ref: React.Ref<HTMLInputElement>, // focusRef to focus on input element it when clicking on the input block
+  }) => React.ReactNode,
+  hideFooter?: boolean,
+  placeholder?: string,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const clearButton = <button onClick={onClear}
+    className="button ghost text-xs py-0 text-fg4 hover:text-fg3"
+  >
+    Clear
+  </button>
+
+  const onInputEnter = (e: KeyboardEvent) => {
+    if (e.key === "Enter")
+      if (saveable) onSave(value)
+  }
+  const inputProps = {
+    value, onChange, ref: inputRef, placeholder, onKeyDown: onInputEnter
+  }
+
+
   return <>
-    <Label>{label}</Label>
-    <InputBlock onClick={() => {
-      inputRef.current?.focus()
-    }}>
-      {renderInput ? renderInput :
-        <Input value={value} onChange={onChange} ref={inputRef}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && saveable) {
-              onSave(value)
-            }
-          }}
-        />
+    <div className="flex">
+      <Label className="grow">
+        {label}
+      </Label>
+      {clearable && exists ? clearButton : null}
+    </div>
+    <InputBlock onClick={() => inputRef.current?.focus()}>
+      {
+        (clearable && !exists) ?
+          <InputWideButton onClick={onSetToNonUndefined}>
+            <LucidePlus />
+            Set value
+          </InputWideButton>
+          : renderInput ?
+            renderInput(inputProps)
+            : <Input {...inputProps} value={String(value)} />
       }
       {
         hideFooter ? null :
@@ -109,7 +172,7 @@ function ProjectNameInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson(true)
   const field = useField(packageJson.name, {
     validate: (value) => packageJsonParser.name.validate(value, () => false),
-    warn: packageJsonParser.name.warn
+    warn: packageJsonParser.name.warn,
   })
   const { value: name } = field
 
@@ -151,6 +214,7 @@ function ProjectNameInput() {
         newPackageJson.name = newName
         updatePackageJson(newPackageJson)
       }}
+      placeholder="my-package"
       description={<div className="flex flex-col gap-2">
         The name of the package. If If you don't plan to publish your package, the name and version fields are optional.
         <div className="flex flex-row gap-2 items-baseline bg-transparent outline-none">
@@ -190,8 +254,10 @@ function ProjectVersionInput() {
 
 function ProjectDescriptionInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson(true)
-  const field = useField(packageJson.description ?? "", {
+  const field = useField(packageJson.description, {
     validate: (value) => packageJsonParser.description.validate(value),
+    clearable: true,
+    defaultData: () => ""
   })
   return <div>
     <BasicField
@@ -210,11 +276,11 @@ function ProjectDescriptionInput() {
 
 
 
-function ListInput(props: Omit<ComponentProps<"input">, 'value' | 'onChange'> & {
+const ListInput = (props: Omit<ComponentProps<"input">, 'value' | 'onChange'> & {
   value: string[],
   onChange: (value: string[]) => void,
   inputPlaceholder?: string,
-}) {
+}) => {
   const [ inputValue, setInputValue ] = useState("")
 
   function RadixIconsCross2(props: React.SVGProps<SVGSVGElement>) {
@@ -260,7 +326,7 @@ function ListInput(props: Omit<ComponentProps<"input">, 'value' | 'onChange'> & 
 
   return (
     <div>
-      <div className="px-1 flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap p-1">
         {props.value.length === 0 && <div className="px-1 font-mono text-xs text-fg3">No items added yet.</div>}
         {props.value.map((v, i) => {
           return <div
@@ -315,7 +381,7 @@ function ProjectKeywordsInput() {
         updatePackageJson(newPackageJson)
       }}
       hideFooter={true}
-      renderInput={
+      renderInput={() =>
         <ListInput
           value={field.value}
           onChange={(newValue) => {
@@ -327,6 +393,111 @@ function ProjectKeywordsInput() {
         />
       }
       description="An array of keywords that describe the package. Helps people discover your package, as it's listed in `npm search`."
+    />
+  </div>
+}
+
+function ProjectURLInput() {
+  const [ packageJson, updatePackageJson ] = usePackageJson(true)
+  const field = useField(packageJson.homepage, {
+    validate: (value) => packageJsonParser.homepage.validate(value),
+    clearable: true,
+    defaultData: () => ""
+  })
+  return <div>
+    <BasicField
+      {...field}
+      label="Homepage URL"
+      placeholder="https://github.com/npm/example#readme"
+      onSave={(newKeywords) => {
+        const newPackageJson = { ...packageJson }
+        newPackageJson.homepage = newKeywords
+        updatePackageJson(newPackageJson)
+      }}
+      description="The URL to the project homepage."
+    />
+  </div>
+}
+
+function ProjectBugsInput() {
+  const [ packageJson, updatePackageJson ] = usePackageJson(true)
+  const field = useField(packageJson.bugs, {
+    validate: (value) => packageJsonParser.bugs.validate(value),
+    clearable: true,
+    defaultData: () => ({}),
+    equalityCheck: (a, b) => {
+      if (typeof a === "string" && typeof b === "string")
+        return a === b
+      if (typeof a === "object" && a !== null && typeof b === "object" && b !== null)
+        return a.url === b.url && a.email === b.email
+      if (typeof a === "string" && typeof b === "object" && 'url' in b && typeof b.url === "string")
+        return a === b.url
+      if (typeof b === "string" && typeof a === "object" && 'url' in a && typeof a.url === "string")
+        return a.url === b
+      else
+        return a === b
+    }
+  })
+
+  function MaterialSymbolsAlternateEmail(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE */}<path fill="currentColor" d="M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12v1.45q0 1.475-1.012 2.513T18.5 17q-.875 0-1.65-.375t-1.3-1.075q-.725.725-1.638 1.088T12 17q-2.075 0-3.537-1.463T7 12t1.463-3.537T12 7t3.538 1.463T17 12v1.45q0 .65.425 1.1T18.5 15t1.075-.45t.425-1.1V12q0-3.35-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20h5v2zm0-7q1.25 0 2.125-.875T15 12t-.875-2.125T12 9t-2.125.875T9 12t.875 2.125T12 15" /></svg>) }
+  function MingcuteAttachmentLine(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from MingCute Icon by MingCute Design - https://github.com/Richard9394/MingCute/blob/main/LICENSE */}<g fill="none" fillRule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z" /><path fill="currentColor" d="M18.71 17.565a4.25 4.25 0 0 0 0-6.01l-6.54-6.54A1 1 0 0 1 13.584 3.6l6.54 6.54a6.25 6.25 0 1 1-8.838 8.84l-7.954-7.955A4.501 4.501 0 0 1 9.698 4.66l7.953 7.953a2.752 2.752 0 0 1-3.892 3.891L6.513 9.257a1 1 0 0 1 1.414-1.415l7.247 7.247a.751.751 0 0 0 1.063-1.062L8.284 6.074A2.501 2.501 0 0 0 4.746 9.61l7.954 7.954a4.25 4.25 0 0 0 6.01 0Z" /></g></svg>) }
+
+  const CloseButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost p-1 text-fg4 hover:text-fg3", props.className)}>
+    <LucideX />
+  </button>
+
+
+  const url = typeof field.value === "string" ? field.value : field.value?.url
+  const email = typeof field.value === "string" ? undefined : field.value?.email
+
+  const changeUrl = (e: ChangeEvent<HTMLInputElement, HTMLInputElement>) => field.setValue({ url: e.target.value, email })
+  const changeEmail = (e: ChangeEvent<HTMLInputElement, HTMLInputElement>) => field.setValue({ url, email: e.target.value })
+  const unsetUrl = () => field.setValue(email === undefined ? undefined : { url: undefined, email })
+  const unsetEmail = () => field.setValue(url === undefined ? undefined : { url, email: undefined })
+  const setUrl = () => field.setValue({ url: "", email })
+  const setEmail = () => field.setValue({ url, email: "" })
+
+  return <div>
+    <BasicField
+      {...field}
+      label="Bugs URL"
+      onSave={(bugsUrl) => {
+        const newPackageJson = { ...packageJson }
+        newPackageJson.bugs = bugsUrl
+        updatePackageJson(newPackageJson)
+      }}
+      renderInput={() =>
+        <div className="flex flex-col">
+
+          <div className="flex gap-1 items-center px-2">
+            <MingcuteAttachmentLine className="text-fg4 text-lg shrink-0" />
+            {url === undefined ?
+              <InputWideButton onClick={setUrl}>
+                <LucidePlus />Set URL
+              </InputWideButton>
+              :
+              <>
+                <Input className="" placeholder="url" value={url} onChange={changeUrl} />
+                <CloseButton onClick={unsetUrl} />
+              </>
+            }
+          </div>
+
+          <div className="flex gap-1 items-center px-2">
+            <MaterialSymbolsAlternateEmail className="text-fg4 text-lg shrink-0" />
+            {email === undefined ?
+              <InputWideButton onClick={setEmail}>
+                <LucidePlus />Set email
+              </InputWideButton>
+              :
+              <>
+                <Input className="" placeholder="email" value={email} onChange={changeEmail} />
+                <CloseButton onClick={unsetEmail} />
+              </>
+            }
+          </div>
+        </div>}
+      description="The URL to the project's issue tracker."
     />
   </div>
 }

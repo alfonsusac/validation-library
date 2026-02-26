@@ -8,5 +8,7 @@
     "jsx": "preserve",
     "module": "Preserve",
     "moduleResolution": "bundler",
+
+    "strict": true,
   }
 }
