@@ -1,9 +1,10 @@
-import { startTransition, useActionState, useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent } from "react"
+import { startTransition, useActionState, useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent, type SetStateAction } from "react"
 import type { PackageJson } from "./lib/package-json"
 import { usePackageJson } from "./App"
 import { jsonfetch } from "./lib/fetch"
 import { packageJsonParser } from "./lib/package-json-validations"
 import { cn } from "lazy-cn"
+import { useAsync } from "./lib/react-async"
 
 export function ProjectSettings(props: {
   packageJSON: PackageJson,
@@ -15,6 +16,7 @@ export function ProjectSettings(props: {
     <ProjectKeywordsInput />
     <ProjectURLInput />
     <ProjectBugsInput />
+    <ProjectLicenseInput />
   </div>
 }
 
@@ -51,10 +53,21 @@ const useField = <T extends any>(initialData: T, opts:
   const [ value, setValue ] = useState(initialData)
   useEffect(() => setValue(initialData), [ JSON.stringify(initialData) ])
 
+  // const setUnsavedValue = (v: SetStateAction<T>) => {
+  //   setValue(prev => {
+  //     const newValue = typeof v === "function" ? (v as (prevState: T) => T)(prev) : v
+  //     return newValue
+  //   })
+  //   // do side effects/fetching/async field validation here
+  // }
+
+  // isChanged logic
   const isChanged = opts.equalityCheck?.(value, initialData) ??
     (typeof value === "object" && value !== null) ?
     (JSON.stringify(value) !== JSON.stringify(initialData)) :
     value !== initialData
+
+  // error and warn logic
   const error = opts.validate(value)
   const warns = opts.warn?.(value) || []
   const saveable = isChanged && error === undefined
@@ -506,4 +519,41 @@ function ProjectLicenseInput() {
   // - [ ] support for custom license file (e.g. "SEE LICENSE IN LICENSE.txt")
   // - [ ] only allow max 2 licenses because SPDX format for multiple licenses is hard to parse and validate, and it's uncommon to have more than 2 licenses. If more than 2 licenses are needed, users can use a custom license file.
   // - [ ] allow unlicensed
+  const [ val, setVal ] = useState("")
+
+  const [ delayedVal, loading, reset ] = useAsync(async (signal) => {
+    console.log("Sending ", val)
+
+    await new Promise(resolve => setTimeout(resolve,
+      Math.random() * 2500
+    ))
+
+    if (signal.aborted) {
+      console.log("aborted ", val)
+      throw new Error("aborted")
+    }
+
+    return val
+  }, [ val ])
+
+  return <div>
+    <Label>License</Label>
+    <InputBlock>
+      <Input
+        value={val} onChange={(e) => setVal(e.currentTarget.value)}
+        placeholder="SPDX license identifier, e.g. MIT or Apache-2.0 OR MIT" />
+      <InputBlockFooter>
+        <InputBlockMessage>
+          {delayedVal.status === "ok" ? delayedVal.result :
+            delayedVal.status === "error" ? `Error: ${ delayedVal.error }` :
+              delayedVal.status === "loading" ? "Checking..." :
+                "Type a license to see validation result here."
+          }
+        </InputBlockMessage>
+
+      </InputBlockFooter>
+    </InputBlock>
+  </div>
+
+
 }

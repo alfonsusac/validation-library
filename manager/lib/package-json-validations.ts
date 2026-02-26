@@ -99,5 +99,32 @@ export const packageJsonParser = {
         // either one or both of url and email should be present
       }
     }
+  },
+  license: {
+    // - [ ] no license means "All rights reserved"
+    // - [ ] error: must uses SPDX license identifier (fetch list)
+    // - [ ] warn: consider using one that are OSI approvied
+    // - [ ] error: multiple must follow SPDX format (e.g. MIT OR Apache-2.0)
+    // - [ ] support for custom license file (e.g. "SEE LICENSE IN LICENSE.txt")
+    // - [ ] only allow max 2 licenses because SPDX format for multiple licenses is hard to parse and validate, and it's uncommon to have more than 2 licenses. If more than 2 licenses are needed, users can use a custom license file.
+    // - [ ] allow unlicensed
+    validate: (value: unknown, spdxLicenseId: string[]) => {
+      if (typeof value === "undefined")
+        return
+      if (typeof value !== "string")
+        return "license must be a string"
+      // Todo : validate with SPDX expression
+      if (value === "UNLICENSED")
+        return
+      if (value.startsWith("SEE LICENSE IN ")) {
+        const licenseFile = value.slice("SEE LICENSE IN ".length)
+        // TODO: validate as file path
+        if (licenseFile.length === 0)
+          return "license file name cannot be empty"
+        if (/\s/.test(licenseFile))
+          return "license file name cannot contain whitespace"
+        return
+      }
+    }
   }
 }

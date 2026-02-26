@@ -1,5 +1,5 @@
 import { watch as fswatch } from "node:fs"
-import { onExit } from "./cleanup"
+import { onExit } from "./server-cleanup"
 import { Listener } from "./util-listener"
 
 

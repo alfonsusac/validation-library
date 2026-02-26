@@ -88,3 +88,10 @@ export function appStore<T>(name: string, cb: {
   return [ useStore ] as const
 }
 // usage: use outside of component
+
+
+
+
+export function query() {
+
+}
