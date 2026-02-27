@@ -2,4 +2,6 @@
 
 import { startManager } from "./manager/Server"
 
-startManager()
+export const { 
+  $JSONFetchRoutesType,
+} = startManager()

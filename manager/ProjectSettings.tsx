@@ -1,6 +1,6 @@
 import { startTransition, useActionState, useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent, type SetStateAction } from "react"
 import type { PackageJson } from "./lib/package-json"
-import { usePackageJson } from "./App"
+import { gofetch, usePackageJson } from "./App"
 import { jsonfetch } from "./lib/fetch"
 import { packageJsonParser } from "./lib/package-json-validations"
 import { cn } from "lazy-cn"
@@ -522,7 +522,7 @@ function ProjectLicenseInput() {
   const [ val, setVal ] = useState("")
 
   const [ delayedVal, loading, reset ] = useAsync(async (signal) => {
-    console.log("Sending ", val)
+    if (val === "") return "ok" // no license means "All rights reserved", which is valid
 
     await new Promise(resolve => setTimeout(resolve,
       Math.random() * 2500
@@ -533,7 +533,12 @@ function ProjectLicenseInput() {
       throw new Error("aborted")
     }
 
-    return val
+    const res = await gofetch("GET:/sdpx-licenses")
+    if (res.status === "ok") {
+      return res.data.map((license) => license.id).includes(val) ? "ok" : "license not found in SPDX list"
+    } else {
+      throw res.message
+    }
   }, [ val ])
 
   return <div>

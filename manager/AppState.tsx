@@ -1,6 +1,8 @@
 import { global } from "./lib/lib-global"
 import { createGlobalStore } from "./lib/react-store"
 
+console.log("AppState.tsx reloaded")
+
 const [ getWs ] = global<WebSocket>('__app_ws', () => {
   const ws = new WebSocket("ws://localhost:3000/ws")
   ws.addEventListener("open", () => {

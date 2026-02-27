@@ -1,21 +1,48 @@
+import { createJsonFetchClient } from "./lib/fetch"
+import { createCache } from "./lib/lib-cache"
 import { packageJson } from "./lib/package-json"
 import root from "./root.html"
 
 
-export const startManager = async () => {
+export const startManager = () => {
   console.log("Starting server...")
+
+  const cache = createCache({ store: new Map<string, any>() })
+
+  const { routeHandlers, $JSONFetchRoutesType } = createJsonFetchClient({
+    "GET:/fetch-test":
+      async (query: { text: string }) => {
+        await new Promise(resolve => setTimeout(resolve,
+          Math.random() * 2000 + 500
+        ))
+        return `Echo: ${ query.text }`
+      },
+    "GET:/sdpx-licenses":
+      async () => {
+        return cache(async () => {
+          const res = await fetch("https://raw.githubusercontent.com/spdx/license-list-data/refs/heads/main/json/licenses.json")
+          if (!res.ok) throw new Error(`Failed to fetch SPDX licenses: ${ res.status } ${ res.statusText }`)
+          const json = await res.json()
+          const data = json.licenses.map((license: any) => ({
+            id: license.licenseId,
+            name: license.name,
+            isOsiApproved: license.isOsiApproved,
+          }))
+          return data as {
+            id: string
+            name: string
+            isOsiApproved: boolean
+          }[]
+        })()
+      }
+  })
+
+
   const server = Bun.serve({
     routes: {
       "/": root,
       "/ws": upgradeWsRoute,
-      "/fetch-test": async (req) => {
-        const text = await req.text()
-        // delay for testing loading states and concurrency and race conditions
-        await new Promise(resolve => setTimeout(resolve,
-          Math.random() * 2000 + 500
-        ))
-        return new Response(`Echo: ${ text }`, {})
-      }
+      ...routeHandlers,
     },
     websocket: {
       open(ws) {
@@ -46,6 +73,10 @@ export const startManager = async () => {
   packageJson.publishOnChange(server)
 
   console.log(`Server running at ${ server.url }`)
+
+  return {
+    $JSONFetchRoutesType
+  }
 }
 
 

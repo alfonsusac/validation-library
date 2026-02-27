@@ -2,10 +2,12 @@ import { useSyncExternalStore } from "react"
 import { global } from "./lib-global"
 import { Listener } from "./util-listener"
 
+console.log("react-store.ts reloaded")
 
 export function createGlobalStore<T>(
   name: string,
   init: () => T,
+  cleanup?: (data: T) => void, // not yet tested
 ) {
   // - Survives hot reloads,
   // - is shared across the app
@@ -15,7 +17,7 @@ export function createGlobalStore<T>(
       data: init(),
       listeners: new Listener<T>()
     })
-  })
+  }, (data) => cleanup?.(data.data))
 
   function getter() {
     return getGlobal().data
@@ -35,7 +37,7 @@ export function createGlobalStore<T>(
     const data = useSyncExternalStore(
       (listener) => {
         // console.log("Subscribing...")
-        const cleanup = subscribe(listener);
+        const cleanup = subscribe(listener)
         return () => {
           // console.log("Unsubscribing...")
           cleanup()
@@ -43,7 +45,10 @@ export function createGlobalStore<T>(
       },
       () => getter(),
     )
-    return [ data, update ] as const
+    return [ data, update ] as [
+      data: T,
+      update: (data: T) => void
+    ]
   }
 
   return [ useStore, update, getter, subscribe ] as const
