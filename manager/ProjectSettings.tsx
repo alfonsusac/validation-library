@@ -1,10 +1,11 @@
 import { startTransition, useActionState, useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent, type SetStateAction } from "react"
 import type { PackageJson } from "./lib/package-json"
 import { gofetch, usePackageJson } from "./App"
-import { jsonfetch } from "./lib/fetch"
 import { packageJsonParser } from "./lib/package-json-validations"
 import { cn } from "lazy-cn"
 import { useAsync } from "./lib/react-async"
+import type { MaybePromise } from "bun"
+import { checkNPMName } from "./AppFetches"
 
 export function ProjectSettings(props: {
   packageJSON: PackageJson,
@@ -28,6 +29,9 @@ const InputDescription = (props: ComponentProps<"div">) => <div {...props} class
 
 const ErrorMessage = (props: { error: string | undefined }) => props.error === undefined ? null : <div className="text-error">{props.error}</div>
 const WarnMessages = (props: { warns: string[] }) => <div className="text-warning/25">{props.warns.map((warn, i) => <div key={i}>{warn}</div>)}</div>
+const SuccessMessage = (props: { children?: React.ReactNode }) => <div className="text-success">{props.children}</div>
+const LoadingMessage = (props: { children?: React.ReactNode }) => <div className="text-fg3/75 italic">{props.children}</div>
+const Messages = (props: { messages: string[] }) => <div className="text-fg3/75">{props.messages.map((msg, i) => <div key={i}>{msg}</div>)}</div>
 const Input = (props: ComponentProps<"input">) => <input {...props} className={cn("w-full text-fg rounded p-1.5 px-2 font-mono text-sm outline-none placeholder:text-fg4", props.className)} />
 const InputWideButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost text-start hover:bg-bg3/50 flex items-center gap-1 px-2 py-1.5 grow", props.className)} />
 // function RadixIconsPlus(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 15 15" {...props}>{/* Icon from Radix Icons by WorkOS - https://github.com/radix-ui/icons/blob/master/LICENSE */}<path fill="currentColor" fillRule="evenodd" d="M8 2.75a.5.5 0 0 0-1 0V7H2.75a.5.5 0 0 0 0 1H7v4.25a.5.5 0 0 0 1 0V8h4.25a.5.5 0 0 0 0-1H8z" clipRule="evenodd" /></svg>) }
@@ -36,8 +40,8 @@ function LucideX(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="htt
 
 const useField = <T extends any>(initialData: T, opts:
   {
-    validate: (value: NoInfer<T>) => string | undefined,
-    warn?: (value: NoInfer<T>) => string[],
+    validate: (value: NoInfer<T>, abortSignal: { aborted: boolean }) => MaybePromise<string | undefined>,
+    warn?: (value: NoInfer<T>, abortSignal: { aborted: boolean }) => MaybePromise<string[]>,
     placeholder?: string,
     equalityCheck?: (a: NoInfer<T>, b: NoInfer<T>) => boolean,
   } & (
@@ -53,14 +57,6 @@ const useField = <T extends any>(initialData: T, opts:
   const [ value, setValue ] = useState(initialData)
   useEffect(() => setValue(initialData), [ JSON.stringify(initialData) ])
 
-  // const setUnsavedValue = (v: SetStateAction<T>) => {
-  //   setValue(prev => {
-  //     const newValue = typeof v === "function" ? (v as (prevState: T) => T)(prev) : v
-  //     return newValue
-  //   })
-  //   // do side effects/fetching/async field validation here
-  // }
-
   // isChanged logic
   const isChanged = opts.equalityCheck?.(value, initialData) ??
     (typeof value === "object" && value !== null) ?
@@ -68,8 +64,15 @@ const useField = <T extends any>(initialData: T, opts:
     value !== initialData
 
   // error and warn logic
-  const error = opts.validate(value)
-  const warns = opts.warn?.(value) || []
+  const [ errorRes, isValidating, resetValidate ] = useAsync(async (signal) => { return await opts.validate(value, signal) }, [ value ])
+  const [ warnsRes, isCheckingWarns, resetWarns ] = useAsync(async (signal) => { return await opts.warn?.(value, signal) || [] }, [ value ])
+  const error = errorRes.status === "ok" ? errorRes.result : undefined
+  const warns = warnsRes.status === "ok" ? warnsRes.result : []
+
+  const otherErrors: string[] = []
+  if (errorRes.status === 'error') otherErrors.push(error ?? "Unknown Error validating the field")
+  if (warnsRes.status === 'error') otherErrors.push(...warns)
+
   const saveable = isChanged && error === undefined
   const resettable = isChanged
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,14 +102,19 @@ const useField = <T extends any>(initialData: T, opts:
   }
 
   return {
-    value, setValue, isChanged, error, warns, saveable, onChange,
-    resettable, reset, exists, clearable: opts.clearable, onClear, onSetToNonUndefined
+    value, setValue, isChanged,
+    error, warns, isValidating, isCheckingWarns, resetValidate, resetWarns,
+    saveable, onChange,
+    resettable, reset, exists, clearable: opts.clearable, onClear,
+    onSetToNonUndefined, otherErrors,
   } as const
 }
 
 const BasicField = <T,>({
-  value, onChange, error, warns, saveable, onSave, resettable, reset, label, description, renderInput, hideFooter,
-  placeholder, clearable, onClear, exists, isChanged, onSetToNonUndefined
+  value, onChange, error, warns, saveable, onSave, resettable, reset, label,
+  description, renderInput, hideFooter, placeholder, clearable, onClear, exists,
+  isChanged, onSetToNonUndefined, isCheckingWarns, isValidating, otherErrors,
+  resetValidate, resetWarns, setValue, extraMessages
 }: ReturnType<typeof useField<T>> & {
   onSave: (value: T) => void,
   label: React.ReactNode,
@@ -116,6 +124,7 @@ const BasicField = <T,>({
   }) => React.ReactNode,
   hideFooter?: boolean,
   placeholder?: string,
+  extraMessages?: React.ReactNode,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -157,6 +166,12 @@ const BasicField = <T,>({
             <InputBlockMessage>
               <ErrorMessage error={error} />
               <WarnMessages warns={warns} />
+              <Messages messages={otherErrors} />
+              {
+                isValidating ? <LoadingMessage>Validating...</LoadingMessage> :
+                  isCheckingWarns && <LoadingMessage>Checking...</LoadingMessage>
+              }
+              {extraMessages}
             </InputBlockMessage>
             <button
               disabled={!resettable}
@@ -182,40 +197,27 @@ const BasicField = <T,>({
 
 function ProjectNameInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson(true)
+  const [ isCheckAvailEnabled, setIsCheckAvailEnabled ] = useState(false)
   const field = useField(packageJson.name, {
     validate: (value) => packageJsonParser.name.validate(value, () => false),
     warn: packageJsonParser.name.warn,
   })
-  const { value: name } = field
+  const name = field.value
 
-  const [ state, dispatch, pending ] = useActionState(
-    async () => {
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const url = `https://registry.npmjs.org/${ name }`
-      const res = await jsonfetch(`https://registry.npmjs.org/${ name }`)
-      switch (res.status) {
-        case 'error':
-          if (res.statusCode === 404) {
-            return "available"
-          } else {
-            console.log("error checking if name exists: ", res.message, url)
-            return "error"
-          }
-        case "fetch error":
-          console.log("fetch error checking if name exists: ", res.message, url)
-          return "error"
-        case "ok":
-          if (typeof res.data === 'object' && res.data !== null) {
-            if ('_id' in res.data && typeof res.data._id === "string") {
-              return "exists"
-            }
-            console.log("error checking if name exists: unexpected response data", res.data, url)
-            return "error"
-          }
-          console.log("error checking if name exists: unexpected response", res, url)
-          return "error"
-      }
-    }, "idle")
+  const [ checkResult, isLoading, resetCheck ] = useAsync(async signal => {
+    if (!isCheckAvailEnabled) return { status: "disabled" as const }
+    if (field.error) return { status: "disabled" as const }
+    await new Promise(resolve => setTimeout(resolve, 250))
+    if (signal.aborted) return { status: "disabled" as const }
+    const res = await checkNPMName(name)
+    if (res === "available") return { status: "ok" as const, message: `${ name } is available on npm` }
+    if (res === "exists") return { status: "err" as const, message: `${ name } is already taken on npm` }
+    if (res === "fetch error") return { status: "warn" as const, message: `Error checking ${ name } on npm. Unable to fetch.` }
+    if (res === "malformed json") return { status: "warn" as const, message: `Error checking ${ name } on npm. Unable to read json.` }
+    if (res === "unexpected response data") return { status: "warn" as const, message: `Error checking ${ name } on npm. Unexpected response data.` }
+    if (res === "unexpected server response") return { status: "warn" as const, message: `Error checking ${ name } on npm. Unexpected response.` }
+    return { status: "warn" as const, message: `Error checking ${ name } on npm. Unknown error.` }
+  }, [ name, field.error, isCheckAvailEnabled ])
 
   return <div>
     <BasicField
@@ -227,19 +229,46 @@ function ProjectNameInput() {
         updatePackageJson(newPackageJson)
       }}
       placeholder="my-package"
+      extraMessages={<>
+        {
+          checkResult.status === "idle" ? null :
+            checkResult.status === "loading" ? <LoadingMessage>Checking availability on npm...</LoadingMessage> :
+              checkResult.status === "error" ? <ErrorMessage error={checkResult.error} /> :
+                checkResult.result.status === "disabled" ? null :
+                  checkResult.result.status === "ok" ? <SuccessMessage>{checkResult.result.message}</SuccessMessage> :
+                    checkResult.result.status === "err" ? <ErrorMessage error={checkResult.result.message} /> :
+                      checkResult.result.status === "warn" ? <WarnMessages warns={[ checkResult.result.message ]} /> :
+                        null
+        }
+      </>}
       description={<div className="flex flex-col gap-2">
         The name of the package. If If you don't plan to publish your package, the name and version fields are optional.
-        <div className="flex flex-row gap-2 items-baseline bg-transparent outline-none">
+
+        <div className="flex flex-row gap-2 items-center cursor-pointer group"
+          onClick={() => setIsCheckAvailEnabled(v => !v)}
+        >
+          <div className={cn("rounded-full bg-bg2 p-1 w-8 transition-[background]",
+            isCheckAvailEnabled ? "bg-slate-600" : ""
+          )}>
+            <div className={cn("rounded-full bg-fg3 w-3 h-3 relative transition-[background,left]",
+              isCheckAvailEnabled ? "bg-slate-200 left-3" : "left-0"
+            )} />
+          </div>
+          <div className="text-fg2 group-hover:text-fg">
+            Check Availability on NPM
+          </div>
+        </div>
+        {/* <div className="flex flex-row gap-2 items-baseline">
           <button className="button text-xs" onClick={() => startTransition(dispatch)}>
             Check
           </button>
           <div className="text-xs">
             {pending === true && <div className="text-fg3">Checking if this name exists on npm...</div>}
-            {pending === false && state === "exists" && <div className="text-error">This name is already taken on npm.</div>}
-            {pending === false && state === "available" && <div className="text-emerald-500">This name is available on npm.</div>}
+            {pending === false && state === "exists" && <div className="text-error">"{field.value}" is already taken on npm.</div>}
+            {pending === false && state === "available" && <div className="text-success">"{field.value}" is available on npm.</div>}
             {pending === false && state === "error" && <div className="text-error">There was an error checking if this name exists. Please try again later.</div>}
           </div>
-        </div>
+        </div> */}
       </div>}
     />
   </div>

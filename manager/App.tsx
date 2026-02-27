@@ -1,4 +1,4 @@
-import { createJsonFetcher } from "./lib/fetch"
+import { createJsonFetcher } from "./lib/fetch-schema"
 import { createPackageJsonClient } from "./lib/package-json-client"
 import { ProjectSettings } from "./ProjectSettings"
 import { $JSONFetchRoutesType } from "../index"

@@ -1,24 +1,24 @@
-import { useEffect, useEffectEvent, useRef, useState } from "react"
+import type { MaybePromise } from "bun"
+import { useEffect, useState } from "react"
+import { getErrorMessage } from "./util-get-error-message"
 
-export function useAsync(
-  fn: (signal: { aborted: boolean }) => Promise<any> | any,
+type UseAsyncReturn<D> = {
+  status: "ok",
+  result: D,
+} | {
+  status: "error",
+  error: string,
+} | {
+  status: "loading"
+} | {
+  status: "idle"
+}
+
+export function useAsync<D>(
+  fn: (signal: { aborted: boolean }) => MaybePromise<D>,
   deps: any[] = []
 ) {
-
-  const [ state, setState ] = useState<{
-    status: "ok",
-    result: any,
-  } | {
-    status: "error",
-    error: any,
-  } | {
-    status: "loading"
-  } | {
-    status: "idle"
-  }>({ status: "idle" })
-
-  // Not sure if this works
-  // const _fn = useEffectEvent(fn)
+  const [ state, setState ] = useState<UseAsyncReturn<D>>({ status: "idle" })
 
   useEffect(() => {
     let signal = {aborted: false}
@@ -29,7 +29,7 @@ export function useAsync(
         const result = await fn(signal)
         if (!signal.aborted) setState({ status: "ok", result })
       } catch (error) {
-        if (!signal.aborted) setState({ status: "error", error })
+        if (!signal.aborted) setState({ status: "error", error: getErrorMessage(error) })
       }
     })()
     return () => {
@@ -40,7 +40,11 @@ export function useAsync(
   const isLoading = state.status === "loading"
   const reset = () => setState({ status: "idle" })
 
-  return [ state, isLoading, reset ] as const
+  return [ state, isLoading, reset ] as [
+    state: UseAsyncReturn<D>,
+    isLoading: boolean,
+    reset: () => void
+  ]
 }
 
 

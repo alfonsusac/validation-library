@@ -1,4 +1,4 @@
-import { createJsonFetchClient } from "./lib/fetch"
+import { createJsonFetchClient } from "./lib/fetch-schema"
 import { createCache } from "./lib/lib-cache"
 import { packageJson } from "./lib/package-json"
 import root from "./root.html"
@@ -6,8 +6,10 @@ import root from "./root.html"
 
 export const startManager = () => {
   console.log("Starting server...")
-
   const cache = createCache({ store: new Map<string, any>() })
+  
+
+
 
   const { routeHandlers, $JSONFetchRoutesType } = createJsonFetchClient({
     "GET:/fetch-test":
