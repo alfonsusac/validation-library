@@ -1,11 +1,11 @@
 import { startTransition, useActionState, useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent, type SetStateAction } from "react"
-import type { PackageJson } from "./lib/package-json"
-import { gofetch, usePackageJson } from "./App"
-import { packageJsonParser } from "./lib/package-json-validations"
+import type { PackageJson } from "../lib/package-json"
+import { fetchServer, usePackageJson } from "../App"
+import { packageJsonParser } from "../lib/package-json-validations"
 import { cn } from "lazy-cn"
-import { useAsync } from "./lib/react-async"
+import { useAsync } from "../lib/react-async"
 import type { MaybePromise } from "bun"
-import { checkNPMName } from "./AppFetches"
+import { checkNPMName } from "./app-fetches"
 
 export function ProjectSettings(props: {
   packageJSON: PackageJson,
@@ -539,35 +539,24 @@ function ProjectBugsInput() {
 }
 
 
+// Requirements:
+// - [ ] no license means "All rights reserved"
+// - [ ] error: must uses SPDX license identifier (fetch list)
+// - [ ] warn: consider using one that are OSI approvied
+// - [ ] error: multiple must follow SPDX format (e.g. MIT OR Apache-2.0)
+// - [ ] support for custom license file (e.g. "SEE LICENSE IN LICENSE.txt")
+// - [ ] only allow max 2 licenses because SPDX format for multiple licenses is hard to parse and validate, and it's uncommon to have more than 2 licenses. If more than 2 licenses are needed, users can use a custom license file.
+// - [ ] allow unlicensed
+
 function ProjectLicenseInput() {
-  // Requirements:
-  // - [ ] no license means "All rights reserved"
-  // - [ ] error: must uses SPDX license identifier (fetch list)
-  // - [ ] warn: consider using one that are OSI approvied
-  // - [ ] error: multiple must follow SPDX format (e.g. MIT OR Apache-2.0)
-  // - [ ] support for custom license file (e.g. "SEE LICENSE IN LICENSE.txt")
-  // - [ ] only allow max 2 licenses because SPDX format for multiple licenses is hard to parse and validate, and it's uncommon to have more than 2 licenses. If more than 2 licenses are needed, users can use a custom license file.
-  // - [ ] allow unlicensed
   const [ val, setVal ] = useState("")
 
   const [ delayedVal, loading, reset ] = useAsync(async (signal) => {
     if (val === "") return "ok" // no license means "All rights reserved", which is valid
-
-    await new Promise(resolve => setTimeout(resolve,
-      Math.random() * 2500
-    ))
-
-    if (signal.aborted) {
-      console.log("aborted ", val)
-      throw new Error("aborted")
-    }
-
-    const res = await gofetch("GET:/sdpx-licenses")
-    if (res.status === "ok") {
-      return res.data.map((license) => license.id).includes(val) ? "ok" : "license not found in SPDX list"
-    } else {
-      throw res.message
-    }
+    // await new Promise(resolve => setTimeout(resolve, Math.random() * 2500))
+    if (signal.aborted) throw 0
+    const res = await fetchServer("GET:/sdpx-licenses")
+    return res.map((license) => license.id).includes(val) ? "ok" : "license not found in SPDX list"
   }, [ val ])
 
   return <div>

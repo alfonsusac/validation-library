@@ -1,17 +1,20 @@
 import { createJsonFetchClient } from "./lib/fetch-schema"
 import { createCache } from "./lib/lib-cache"
 import { packageJson } from "./lib/package-json"
-import root from "./root.html"
+import root from "./entry.html"
+import { getSettings, saveSettings } from "./lib/app-settings"
 
 
 export const startManager = () => {
   console.log("Starting server...")
+
   const cache = createCache({ store: new Map<string, any>() })
-  
 
 
 
   const { routeHandlers, $JSONFetchRoutesType } = createJsonFetchClient({
+    "GET:/settings": getSettings,
+    "POST:/settings": saveSettings,
     "GET:/fetch-test":
       async (query: { text: string }) => {
         await new Promise(resolve => setTimeout(resolve,
@@ -36,7 +39,8 @@ export const startManager = () => {
             isOsiApproved: boolean
           }[]
         })()
-      }
+      },
+  
   })
 
 

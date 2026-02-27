@@ -1,11 +1,11 @@
 import { createJsonFetcher } from "./lib/fetch-schema"
 import { createPackageJsonClient } from "./lib/package-json-client"
-import { ProjectSettings } from "./ProjectSettings"
+import { ProjectSettings } from "./app/ProjectSettings"
 import { $JSONFetchRoutesType } from "../index"
 
 export const [ usePackageJson ] = createPackageJsonClient()
 
-export const gofetch = createJsonFetcher<typeof $JSONFetchRoutesType>()
+export const fetchServer = createJsonFetcher<typeof $JSONFetchRoutesType>()
 
 export function App() {
   const [ packageJSON ] = usePackageJson()

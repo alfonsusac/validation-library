@@ -2,6 +2,9 @@
 //  The server routes are defined in a JSONFetchRoutes object, 
 //  which maps route names to handler functions.The client will 
 //  call the appropriate handler function based on the route 
+
+import { jfetch } from "./fetch"
+
 //  name and arguments passed in.
 type JSONFetchRoutes<
   G extends { [ key: string ]: string } = any,
@@ -12,9 +15,9 @@ type JSONFetchRoutes<
 }
 
 
-type JSONFetchServerReturnTypes = {
+export type JSONFetchServerReturnTypes<T> = {
   status: "ok",
-  data: any
+  data: T
 } | {
   status: "error",
   errorMsg: string
@@ -24,18 +27,37 @@ type JSONFetchServerReturnTypes = {
 }
 
 const _Response = {
-  ok: (result: any) => new Response(
-    JSON.stringify({ status: "ok", data: result } satisfies JSONFetchServerReturnTypes),
+  ok: <T>(result: any) => new Response(
+    JSON.stringify({ status: "ok", data: result } satisfies JSONFetchServerReturnTypes<T>),
     { headers: { "Content-Type": "application/json" } }
   ),
-  error: (error: any) => new Response(
-    JSON.stringify({ status: "error", errorMsg: error instanceof Error ? error.message : String(error) } satisfies JSONFetchServerReturnTypes),
-    { headers: { "Content-Type": "application/json" }, status: 500 }
-  ),
-  invalidRequest: (errorMsg: string) => new Response(
-    JSON.stringify({ status: "invalid_request", errorMsg } satisfies JSONFetchServerReturnTypes),
-    { headers: { "Content-Type": "application/json" }, status: 400 }
-  )
+  // This is for unnkown errors that occurs during route handling, 
+  //  such as exceptions thrown by the handler function.
+  // Client will receive a generic "Server error occured" message,
+  //  and should not rely on the error message for any logic.
+  // If you want to send known errors with specific messages, use the
+  //  ok response with a specific data structure that indicates an error,
+  //  since it is implemented with a generic type T. 
+  error: <T>(error: any) => {
+    console.log(`[jsonfetch.error] Route handler error:`, error)
+    return new Response(
+      JSON.stringify({ status: "error", errorMsg: error instanceof Error ? error.message : String(error) } satisfies JSONFetchServerReturnTypes<T>),
+      { headers: { "Content-Type": "application/json" }, status: 500 }
+    )
+  },
+  // This is for handling invalid requests, such as invalid query on GET or 
+  //  invalid body on POST. This error is intended to indicate a bug 
+  //  in the client implementation.
+  // In the client, it will throw error since ideally client-server contract
+  //  should ensure that args passed should be valid. Otherwise, it indicates a
+  //  bug in the implementation of fetch-schema.ts.
+  invalidRequest: <T>(errorMsg: string) => {
+    console.log(`[jsonfetch.invalidRequest] Invalid request: ${ errorMsg }`)
+    return new Response(
+      JSON.stringify({ status: "invalid_request", errorMsg } satisfies JSONFetchServerReturnTypes<T>),
+      { headers: { "Content-Type": "application/json" }, status: 400 }
+    )
+  }
 }
 
 // type GetFetchType<R extends JSONFetchRoutes> = 
@@ -139,65 +161,78 @@ type GetRouteReturnTypeFromName<R extends JSONFetchRoutes, RouteName extends key
 export function createJsonFetcher<S extends JSONFetchRoutes>(
   baseUrl?: string
 ) {
-  type RespondReturnType<T = any> = {
-    status: "ok",
-    data: T
-  } | {
-    status: "error",
-    message: string
-  } | {
-    status: "fetch error",
-    message: any
-  }
-  return async function myfetch<
-    R extends GetRouteNames<S>
-  >(
+  return async function serverFetch<R extends GetRouteNames<S>>(
     route: R,
     ...args: GetRouteArgsFromName<S, R>
   ) {
-    const _respond = {
-      ok: (result: any): RespondReturnType<Awaited<GetRouteReturnTypeFromName<S, R>>> => ({ status: "ok", data: result }),
-      error: (message: string): RespondReturnType<Awaited<GetRouteReturnTypeFromName<S, R>>> => ({ status: "error", message }),
-      fetchError: (message: any): RespondReturnType<Awaited<GetRouteReturnTypeFromName<S, R & string>>> => ({ status: "fetch error", message })
-    }
+    type ServerFetchReturnType = JSONFetchServerReturnTypes<Awaited<GetRouteReturnTypeFromName<S, R>>>
+
     const [ method, path ] = route.split(":") as [ method: "GET" | "POST", path: string ]
 
-    try {
-      // validate json if needed
-      const json: JSONFetchServerReturnTypes = await (async () => {
-        if (method === 'GET') {
-          const query = args[ 0 ] as any
-          const queryString = new URLSearchParams(query).toString()
-          const url = `${ baseUrl ?? "" }${ path }?${ queryString }`
-          console.log("[jsonfetch] GET request URL:", url)
-          const res = await fetch(url)
-          return await res.json()
-        }
-        if (method === "POST") {
-          const url = `${ baseUrl ?? "" }${ path }`
-          const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(args)
-          })
-          return await res.json()
-        }
-        throw 'invalid method'
-      })()
-
-      if (json.status === "ok") {
-        return _respond.ok(json.data)
-      } else if (json.status === "error") {
-        return _respond.error(json.errorMsg)
-      } else {
-        console.log("[jsonfetch] Invalid response format:", json)
-        return _respond.error("Invalid response format")
+    const res = await (async () => {
+      if (method === "GET") {
+        const queryString = new URLSearchParams(args[ 0 ] as any).toString()
+        const url = `${ baseUrl ?? "" }${ path }?${ queryString }`
+        return await jfetch<ServerFetchReturnType>(url)
       }
+      if (method === "POST") {
+        const url = `${ baseUrl ?? "" }${ path }`
+        return await jfetch<ServerFetchReturnType>(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(args)
+        })
+      }
+      throw new Error(`Invalid method: ${ method } in route: ${ route }`)
+    })()
 
-    } catch (error) {
-      console.log("[jsonfetch] Fetch error:", error)
-      return _respond.fetchError(error instanceof Error ? error.message : String(error))
+    if (res.status === "fetch error") {
+      console.error(`[jsonfetch-client] Fetch error on route ${ route }:`, res.message)
+      throw new Error(`Unable to fetch.`)
     }
+    if (res.json.status === "parse error") {
+      console.error(`[jsonfetch-client] Parse error on route ${ route }:`, res.json.message)
+      throw new Error(`Unable to parse data.`)
+    }
+    if (res.json.jsondata.status === "invalid_request")
+      throw new Error(`Invalid request: ${ res.json.jsondata.errorMsg }. 
+Route: ${ route }, 
+Args: ${ JSON.stringify(args) }
+`)
+    if (res.json.jsondata.status === "error")
+      throw new Error(`Server error occured.`)
+    // do not expose server error message to client since it may contain sensitive info. Client should rely on error status for logic, and treat all error messages as generic "Server error occured".
+
+    return res.json.jsondata.data
+    // In this setup, server lives closely to client, and they are developeed
+    //  together. So we can ensure the following things:
+    // - fetch never errors with network error,
+    //    since server is always available.
+    // - server will always return a valid JSON response with the
+    //    specified format, so we can safely parse it without try-catch,
+    //    and rely on the type system to ensure we handle all possible
+    //    cases of the response.
+    // - the client will always send the correct arguments as specified
+    //    in the route handler type, so we can rely on the type system
+    //    to ensure the correctness of the request, and server will not
+    //    need to do extra validation on the input.
+    // This allows us to have a very simple and efficient client
+    //  implementation without worrying about network errors, invalid
+    //  responses, or input validation, while still having strong type
+    //  safety and clear error handling for server - side errors and
+    //  invalid requests.
+    
+    // For exercise purposes, if the environments are separated, then
+    //  the following things may need to be implemented:
+    // - network error handling on client,
+    // - retry mechanism.
+    // - timeout mechanism
+    // - validate server input on server
+    // - validate server returns on client
+    // - parser error and invalid request args and returns can still be
+    //    obfuscated to "invalid requests". but network errors should
+    //    still be separated since it can let user know on what to do.
+    // - caching!
   }
 }
 
@@ -210,8 +245,8 @@ async function __test() {
     "GET:/fetch-test2": (query: { text: string }) => 4,
     "POST:/post-test": (a: { hello: "world" }, b: { foo: "bar" }) => [ a, b ],
     "POST:/post-test2": (c: 8) => ({ hello: "world" }),
-    "GET:/empty-test": () => { },
-    "POST:/empty-post-test": () => { }
+    "GET:/empty-test": () => 8,
+    "POST:/empty-post-test": () => ""
   })
 
   const api = createJsonFetcher<typeof $JSONFetchRoutesType>()
@@ -230,8 +265,11 @@ async function __test() {
   const res8 = await api("GET:/empty-test")
   const res9 = await api("POST:/empty-post-test")
 
-  if (res4.status === "ok") {
-    res4.data.hello
-  }
-
+  res8.toExponential
+  // if (res8.json.status === "ok") {
+  //   if (res8.json.jsondata.status === "ok") {
+  //     const data = res8.json.jsondata.data
+  //     console.log("Data: ", data) // should be 8
+  //   }
+  // }
 }

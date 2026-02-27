@@ -1,4 +1,4 @@
-import { jfetch } from "./lib/fetch"
+import { jfetch } from "../lib/fetch"
 
 export async function checkNPMName(name: string) {
   const url = `https://registry.npmjs.org/${ name }`
@@ -20,7 +20,7 @@ export async function checkNPMName(name: string) {
     return "malformed json"
   }
 
-  const json = res.json.data
+  const json = res.json.jsondata
   if (typeof json === "object" && json !== null
     && "_id" in json && typeof json._id === "string"
   ) {

@@ -1,5 +1,5 @@
-import { global } from "./lib/lib-global"
-import { createGlobalStore } from "./lib/react-store"
+import { global } from "../lib/lib-global"
+import { createGlobalStore } from "../lib/react-store"
 
 console.log("AppState.tsx reloaded")
 

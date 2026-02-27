@@ -1,6 +1,6 @@
 import { getErrorMessage } from "./util-get-error-message"
 
-export async function jfetch(url: string, opts?: {}) {
+export async function jfetch<T>(url: string, opts?: RequestInit) {
   try {
     const res = await fetch(url, opts)
 
@@ -8,9 +8,11 @@ export async function jfetch(url: string, opts?: {}) {
 
     const jsonRes = await (async () => {
       try {
-        return { status: "ok" as const, data: await res.json() }
+        const json = await res.json() as T
+        // console.log("Json: ", json)
+        return { status: "ok" as const, jsondata: json }
       } catch (error) {
-        return { status: "parse error" as const, data: "Invalid JSON response" }
+        return { status: "parse error" as const, message: "Invalid JSON response" }
       }
     })()
 

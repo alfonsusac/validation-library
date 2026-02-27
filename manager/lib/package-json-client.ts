@@ -1,4 +1,4 @@
-import { appStore } from "../AppState"
+import { appStore } from "../app/app-store"
 import type { PackageJson, PackageJsonEventSchema } from "./package-json"
 import { clientWs } from "./socket-core"
 
