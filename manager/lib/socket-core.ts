@@ -106,8 +106,15 @@ export function serverWs<TEventSchema extends EventSchema>() {
     name: N,
     data: Awaited<ReturnType<TEventSchema[ N ]>>
   ) {
-    server.publish(channel, encodeServerPayload(name, data))
+    server.publish(channel, getPayload(name, data))
   }
+  function getPayload<N extends keyof TEventSchema & string>(
+    name: N,
+    data: Awaited<ReturnType<TEventSchema[ N ]>>
+  ) {
+    return encodeServerPayload(name, data)
+  }
+
   function handleMessage(
     message: string | Buffer<ArrayBuffer>,
     handlers: {
@@ -125,6 +132,7 @@ export function serverWs<TEventSchema extends EventSchema>() {
     emit,
     handleMessage,
     publish,
+    getPayload,
   }
 }
 

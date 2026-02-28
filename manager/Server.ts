@@ -3,13 +3,16 @@ import { createCache } from "./lib/lib-cache"
 import { packageJson } from "./lib/package-json"
 import root from "./entry.html"
 import { getSettings, saveSettings } from "./lib/app-settings"
+import { createWebSocketController } from "./lib/websocket-core"
 
 
 export const startManager = () => {
   console.log("Starting server...")
 
   const cache = createCache({ store: new Map<string, any>() })
-
+  const wsHandler = createWebSocketController([
+    packageJson.realtimeHandler
+  ])
 
 
   const { routeHandlers, $JSONFetchRoutesType } = createJsonFetchClient({
@@ -40,9 +43,8 @@ export const startManager = () => {
           }[]
         })()
       },
-  
-  })
 
+  })
 
   const server = Bun.serve({
     routes: {
@@ -61,7 +63,7 @@ export const startManager = () => {
       },
       message(ws, message) {
         console.log("[ws-message]", message.slice(0, 20)) // log first 20 chars for brevity
-        packageJson.handleWsMessage(ws, message)
+        wsHandler.handleWsMessage(message, ws, server)
       },
     },
     // Fallback for unmatched routes
@@ -76,7 +78,7 @@ export const startManager = () => {
   })
 
   // Update clients with the initial package.json data when file changes
-  packageJson.publishOnChange(server)
+  wsHandler.publishOnChange(server)
 
   console.log(`Server running at ${ server.url }`)
 

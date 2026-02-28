@@ -1,4 +1,4 @@
-import { startTransition, useActionState, useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent, type SetStateAction } from "react"
+import { useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent } from "react"
 import type { PackageJson } from "../lib/package-json"
 import { fetchServer, usePackageJson } from "../App"
 import { packageJsonParser } from "../lib/package-json-validations"
@@ -197,12 +197,13 @@ const BasicField = <T,>({
 
 function ProjectNameInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson(true)
-  const [ isCheckAvailEnabled, setIsCheckAvailEnabled ] = useState(false)
+  // const [ isCheckAvailEnabled, setIsCheckAvailEnabled ] = useState(false)
   const field = useField(packageJson.name, {
     validate: (value) => packageJsonParser.name.validate(value, () => false),
     warn: packageJsonParser.name.warn,
   })
   const name = field.value
+
 
   const [ checkResult, isLoading, resetCheck ] = useAsync(async signal => {
     if (!isCheckAvailEnabled) return { status: "disabled" as const }
