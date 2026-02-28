@@ -1,6 +1,6 @@
 import { serverWs } from './socket-core'
 import { createTextFileWatcher } from './core-file-watcher'
-import { wsplugin } from './websocket-plugin2'
+import { wsplugin } from './websocket-plugin'
 
 export type PackageJson = {
   name: string,
