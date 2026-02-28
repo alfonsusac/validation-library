@@ -1,4 +1,5 @@
 
+import type { MaybePromise } from "bun"
 import { createCoreWebSocketPlugin } from "./websocket-core"
 
 // A Map of functions that the server are able to
@@ -94,7 +95,7 @@ function corewsplugin<
   broadcasts: Broadcasts,
   rpcs: RPCs,
   onServe:
-  (server: WSPluginServerClient<Broadcasts>) => Promise<void>,
+  (server: WSPluginServerClient<Broadcasts>) => MaybePromise<void>,
   onPublish:
   (server: Bun.Server<undefined>, message: OutputPayload) => void,
   decode:
@@ -177,7 +178,7 @@ export function wsplugin<
   broadcasts?: Broadcasts,
   rpcs?: RPCs,
   onServe?:
-  (server: WSPluginServerClient<Broadcasts>) => Promise<void>,
+  (server: WSPluginServerClient<Broadcasts>) => MaybePromise<void>,
 
   // Optional parameters
   onPublish?:

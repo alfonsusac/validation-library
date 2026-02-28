@@ -1,8 +1,5 @@
 import { serverWs } from './socket-core'
 import { createTextFileWatcher } from './core-file-watcher'
-import type { WebSocketHandler } from 'bun'
-import type { WebSocketPlugin } from './websocket-core'
-import { createWebSocketPlugin } from './websocket-plugin'
 import { wsplugin } from './websocket-plugin2'
 
 export type PackageJson = {
@@ -53,58 +50,57 @@ export const packageJson = {
     }
   }),
 
-  
 
   websocketPlugin: wsplugin({
     broadcasts: {
       "updated:packageJSON": (content: PackageJson) => content
     },
     rpcs: {
-      getPackageJSON: async () => {
-        return await packageJson.fileWatcher.read()
-      },
-      updatePackageJSON: async (ws, newData: PackageJson) => {
-        await Bun.write('./package.json', JSON.stringify(newData, null, 2))
+      getPackageJSON: () => packageJson.fileWatcher.read(),
+      updatePackageJSON: (ws, newData: PackageJson) => {
+        return Bun.write('./package.json', JSON.stringify(newData, null, 2))
       }
     },
-    async onServe(server) {
+    onServe(server) {
       packageJson.fileWatcher.onChange(content => {
         server.broadcast("updated:packageJSON", content)
       })
     },
   }),
 
+
+
   ws: serverWs<PackageJsonEventSchema>(),
 
-  realtimeHandler: {
+  // realtimeHandler: {
 
-    handleWsMessage(
-      message: string | Buffer<ArrayBuffer>,
-      ws: Bun.ServerWebSocket,
-    ) {
-      packageJson.ws.handleMessage(message, {
-        'getPackageJSON': async () => {
-          const packageJsonData = await packageJson.fileWatcher.read()
-          packageJson.ws.emit(ws, "getPackageJSON", packageJsonData)
-        },
-        'updatePackageJSON': async (newData) => {
-          await Bun.write('./package.json', JSON.stringify(newData, null, 2))
-        }
-      })
-    },
+  //   handleWsMessage(
+  //     message: string | Buffer<ArrayBuffer>,
+  //     ws: Bun.ServerWebSocket,
+  //   ) {
+  //     packageJson.ws.handleMessage(message, {
+  //       'getPackageJSON': async () => {
+  //         const packageJsonData = await packageJson.fileWatcher.read()
+  //         packageJson.ws.emit(ws, "getPackageJSON", packageJsonData)
+  //       },
+  //       'updatePackageJSON': async (newData) => {
+  //         await Bun.write('./package.json', JSON.stringify(newData, null, 2))
+  //       }
+  //     })
+  //   },
 
-    onServe(server) {
-      packageJson.fileWatcher.onChange(content => {
-        server.publish("global",
-          packageJson.ws.getPayload("getPackageJSON", content)
-        )
-        // packageJson.ws.publish(server, "global", "getPackageJSON", content)
-      })
-    },
+  //   onServe(server) {
+  //     packageJson.fileWatcher.onChange(content => {
+  //       server.publish("global",
+  //         packageJson.ws.getPayload("getPackageJSON", content)
+  //       )
+  //       // packageJson.ws.publish(server, "global", "getPackageJSON", content)
+  //     })
+  //   },
 
 
 
-  } satisfies WebSocketPlugin
+  // } satisfies WebSocketPlugin
 }
 
 

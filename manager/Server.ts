@@ -11,7 +11,7 @@ export const startManager = () => {
 
   const cache = createCache({ store: new Map<string, any>() })
   const wsHandler = createWebSocketController([
-    packageJson.realtimeHandler
+    packageJson.websocketPlugin
   ])
 
 
