@@ -1,22 +1,15 @@
-import { createAppStore } from "../app/__app-store"
-import type { WebSocketClientCore } from "../lib/websocket-client-core"
 import { createCache } from "../lib/react-store"
-// import type { PackageJson, PackageJsonEventSchema } from "../lib/package-json"
-import { clientWs } from "../lib/socket-core"
 import { createWsPluginClient } from "../lib/websocket-plugin-client"
+import { createContext, use, useSyncExternalStore } from "react"
 import type { PackageJson, PackageJsonEventSchema } from "./package-json"
 import type { AppSocket } from "../app/app-ws"
-import { createContext, use, useSyncExternalStore } from "react"
 
-// PackageJsonEventSchema
-// 
-export function createPackageJsonClient(ws: AppSocket) {
+export function createPackageJsonStore(ws: AppSocket) {
 
   const store = createCache<PackageJson | undefined>(() => undefined)
-  // const appWs = createWsPluginClient()
   const wsClient = createWsPluginClient<PackageJsonEventSchema>({
     send: ws.sendStr,
-    getReadyState: () => ws.readyState,
+    getReadyState: () => ws.instance.instance.readyState,
     subscribeOnOpen: ws.instance.onOpen,
     subscribeOnData: ws.subscribe,
   })
@@ -29,19 +22,40 @@ export function createPackageJsonClient(ws: AppSocket) {
   // request initial data
   wsClient.emitOnceOpen("getPackageJSON")
 
+  function update(payload: Partial<PackageJson>) {
+    const prev = store.get()
+    // console.log(payload, prev)
+    if (!prev) return console.log("Update failed")
+    wsClient.emitOnceOpen("updatePackageJSON", {
+      ...prev,
+      ...payload,
+    })
+  }
+
   return {
+    exists: true,
+    update,
     getter: store.get,
-    subscribe: store.subscribe
+    subscribe: store.subscribe,
   }
 
 }
 
-export const PackageJsonStoreContext = createContext<ReturnType<typeof createPackageJsonClient> | undefined>(undefined)
+export const PackageJsonStoreContext = createContext({ exists: false } as ReturnType<typeof createPackageJsonStore>)
 
-export function usePackageJson() {
+export function usePackageJson<R extends boolean = false>(required?: R) {
   const store = use(PackageJsonStoreContext)
-  if (store === undefined) throw new Error("usePackageJson must be used within a PackageJsonStoreContext.Provider")
-  return useSyncExternalStore(store.subscribe, store.getter)
+  if (!store.exists) throw new Error("usePackageJson must be used within a PackageJsonStoreContext.Provider")
+  const packageJson = useSyncExternalStore(store.subscribe, store.getter)
+  if (packageJson === undefined && required) {
+    const err = new Error("PackageJson is required but not available yet.")
+    Error.captureStackTrace(err, usePackageJson)
+    throw err
+  }
+  return {
+    packageJson: packageJson as (R extends true ? NonNullable<PackageJson> : PackageJson | undefined),
+    updatePackageJson: store.update,
+  }
 }
 
 // export function createPackageJsonClient() {

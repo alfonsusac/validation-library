@@ -31,7 +31,7 @@ export type WebSocketPlugin<T extends undefined = undefined> = {
 
 
 const log = (pluginName: string, message: string) =>
-  false ? console.log(`[ws][${ pluginName }] ${ message }`) : null
+  true ? console.log(`[ws][${ pluginName }] ${ message }`) : null
 
 const logError = (pluginName: string, message: string) =>
   true ? console.error(`[ws][${ pluginName }] ${ message }`) : null

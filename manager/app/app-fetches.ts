@@ -1,4 +1,11 @@
+import type { $JSONFetchRoutesType } from "../.."
 import { jfetch } from "../lib/fetch"
+import { createJsonFetcher } from "../lib/fetch-schema"
+
+
+export const fetchServer = createJsonFetcher<typeof $JSONFetchRoutesType>()
+
+
 
 export async function checkNPMName(name: string) {
   const url = `https://registry.npmjs.org/${ name }`
@@ -7,7 +14,7 @@ export async function checkNPMName(name: string) {
   if (res.status === "fetch error") {
     return "fetch error"
   }
-  
+
   if (res.response.status === 404) {
     return "available" // OK
   }

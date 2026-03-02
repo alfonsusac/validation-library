@@ -65,12 +65,12 @@ export const startManager = async () => {
         ws.subscribe("global")
       },
       close(ws, code, reason) {
-        console.clear()
-        console.log(`Client closed. Code: ${ code }, Reason: ${ reason }. Count:`, server.pendingWebSockets)
+        // console.clear()
+        // console.log(`Client closed. Code: ${ code }, Reason: ${ reason }. Count:`, server.pendingWebSockets)
         ws.unsubscribe("global")
       },
       message(ws, message) {
-        // console.log("[ws-message]", message.slice(0, 20)) // log first 20 chars for brevity
+        console.log("[ws-message]", message.slice(0, 20)) // log first 20 chars for brevity
         wsHandler.handleWsMessage(message, ws, server)
       },
     },

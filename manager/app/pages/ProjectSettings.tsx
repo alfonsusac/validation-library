@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent } from "react"
-import { fetchServer, usePackageJson } from "../../App"
-import { packageJsonParser } from "../lib/package-json-validations"
 import { cn } from "lazy-cn"
 import { useAsync } from "../../lib/react-async"
 import type { MaybePromise } from "bun"
-import { checkNPMName } from "../app-fetches"
+import { checkNPMName, fetchServer } from "../app-fetches"
+import { usePackageJson } from "../../features/package-json-client"
+import { packageJsonParser } from "../../features/package-json-validations"
 
 export function ProjectSettings() {
   return <div className="flex flex-col gap-6 py-4">
@@ -193,7 +193,7 @@ const BasicField = <T,>({
 
 
 function ProjectNameInput() {
-  const [ packageJson, updatePackageJson ] = usePackageJson(true)
+  const { packageJson, updatePackageJson } = usePackageJson(true)
   const [ isCheckAvailEnabled, setIsCheckAvailEnabled ] = useState(false)
   const field = useField(packageJson.name, {
     validate: (value) => packageJsonParser.name.validate(value, () => false),
@@ -273,7 +273,7 @@ function ProjectNameInput() {
 }
 
 function ProjectVersionInput() {
-  const [ packageJson, updatePackageJson ] = usePackageJson(true)
+  const { packageJson, updatePackageJson } = usePackageJson(true)
   const field = useField(packageJson.version, {
     validate: (value) => packageJsonParser.version.validate(value),
   })
@@ -292,7 +292,7 @@ function ProjectVersionInput() {
 }
 
 function ProjectDescriptionInput() {
-  const [ packageJson, updatePackageJson ] = usePackageJson(true)
+  const { packageJson, updatePackageJson } = usePackageJson(true)
   const field = useField(packageJson.description, {
     validate: (value) => packageJsonParser.description.validate(value),
     clearable: true,
@@ -406,7 +406,7 @@ const ListInput = (props: Omit<ComponentProps<"input">, 'value' | 'onChange'> & 
 
 
 function ProjectKeywordsInput() {
-  const [ packageJson, updatePackageJson ] = usePackageJson(true)
+  const { packageJson, updatePackageJson } = usePackageJson(true)
   const field = useField(packageJson.keywords, {
     validate: (value) => packageJsonParser.keywords.validate(value),
     clearable: true,
@@ -433,7 +433,7 @@ function ProjectKeywordsInput() {
 }
 
 function ProjectURLInput() {
-  const [ packageJson, updatePackageJson ] = usePackageJson(true)
+  const { packageJson, updatePackageJson } = usePackageJson(true)
   const field = useField(packageJson.homepage, {
     validate: (value) => packageJsonParser.homepage.validate(value),
     clearable: true,
@@ -455,7 +455,7 @@ function ProjectURLInput() {
 }
 
 function ProjectBugsInput() {
-  const [ packageJson, updatePackageJson ] = usePackageJson(true)
+  const { packageJson, updatePackageJson } = usePackageJson(true)
   const field = useField(packageJson.bugs, {
     validate: (value) => packageJsonParser.bugs.validate(value),
     clearable: true,

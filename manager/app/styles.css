@@ -10,9 +10,9 @@
   --warning: oklch(87.9% 0.169 91.605);
 
   --color-fg: var(--foreground);
-  --color-fg-2: color-mix(in oklch, color-mix(in oklch, var(--foreground) 75%, var(--background)) 80%, var(--accent));
-  --color-fg-3: color-mix(in oklch, color-mix(in oklch, var(--foreground) 50%, var(--background)) 80%, var(--accent));
-  --color-fg-4: color-mix(in oklch, color-mix(in oklch, var(--foreground) 25%, var(--background)) 80%, var(--accent));
+  --color-fg-2: color-mix(in oklch, color-mix(in oklch, var(--foreground) 75%, var(--background)) 95%, var(--accent));
+  --color-fg-3: color-mix(in oklch, color-mix(in oklch, var(--foreground) 50%, var(--background)) 95%, var(--accent));
+  --color-fg-4: color-mix(in oklch, color-mix(in oklch, var(--foreground) 25%, var(--background)) 95%, var(--accent));
 
   --color-bg: var(--background);
   --color-bg-2: color-mix(in oklch, var(--background) 90%, var(--foreground));

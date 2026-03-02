@@ -50,8 +50,8 @@ export const packageJson = {
     },
     rpcs: {
       getPackageJSON: () => packageJson.fileWatcher.read(),
-      updatePackageJSON: (ws, newData: PackageJson) => {
-        Bun.write('./package.json', JSON.stringify(newData, null, 2))
+      updatePackageJSON: async (ws, newData: PackageJson) => {
+        await Bun.write('./package.json', JSON.stringify(newData, null, 2))
       }
     },
     onServe(server) {
