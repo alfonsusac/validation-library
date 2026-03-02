@@ -1,22 +1,23 @@
 @import "tailwindcss";
 
 @theme {
-  --foreground: oklch(87.2% 0.01 258.338);
-  --background: oklch(21% 0.034 264.665);
+  --foreground: oklch(87.2% 0.01 258.338); /* gray-300 */
+  --background: oklch(21% 0.034 264.665); /* gray-900  */
+  --accent: oklch(48.487% 0.29116 264.14); /* gray-500 */
   
   --success: oklch(69.6% 0.17 162.48);
   --error: oklch(71.2% 0.194 13.428);
   --warning: oklch(87.9% 0.169 91.605);
 
   --color-fg: var(--foreground);
-  --color-fg2: color-mix(in oklch, var(--foreground) 75%, var(--background));
-  --color-fg3: color-mix(in oklch, var(--foreground) 50%, var(--background));
-  --color-fg4: color-mix(in oklch, var(--foreground) 25%, var(--background));
+  --color-fg-2: color-mix(in oklch, color-mix(in oklch, var(--foreground) 75%, var(--background)) 80%, var(--accent));
+  --color-fg-3: color-mix(in oklch, color-mix(in oklch, var(--foreground) 50%, var(--background)) 80%, var(--accent));
+  --color-fg-4: color-mix(in oklch, color-mix(in oklch, var(--foreground) 25%, var(--background)) 80%, var(--accent));
 
   --color-bg: var(--background);
-  --color-bg2: color-mix(in oklch, var(--background) 90%, var(--foreground));
-  --color-bg3: color-mix(in oklch, var(--background) 80%, var(--foreground));
-  --color-bg4: color-mix(in oklch, var(--background) 70%, var(--foreground));
+  --color-bg-2: color-mix(in oklch, var(--background) 90%, var(--foreground));
+  --color-bg-3: color-mix(in oklch, var(--background) 80%, var(--foreground));
+  --color-bg-4: color-mix(in oklch, var(--background) 70%, var(--foreground));
 
   --color-success: var(--success);
   --color-error: var(--error);
@@ -25,21 +26,21 @@
 
 @layer components {
   .button {
-    @apply rounded p-1 px-4 bg-bg4 text-fg text-sm;
+    @apply rounded p-1 px-4 bg-bg-4 text-fg text-sm;
 
     &:hover {
-      background-color: color-mix(in oklab, var(--color-bg4), white 5%);
-      @apply bg-bg3 cursor-pointer;
+      background-color: color-mix(in oklab, var(--color-bg-4), white 5%);
+      @apply bg-bg-3 cursor-pointer;
     }
 
     &:disabled {
-      @apply bg-transparent text-fg4 pointer-events-none
+      @apply bg-transparent text-fg-4 pointer-events-none
     }
 
     &.ghost{
-      @apply bg-transparent text-fg3;
+      @apply bg-transparent text-fg-3;
       &:hover {
-        @apply bg-transparent text-fg2;
+        @apply bg-transparent text-fg-2;
       }
       &:disabled {
         @apply opacity-0;

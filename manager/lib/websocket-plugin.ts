@@ -1,6 +1,7 @@
 
 import type { MaybePromise } from "bun"
 import { createCoreWebSocketPlugin } from "./websocket-core"
+import { WebSocketPayload } from "./websocket-payload"
 
 // A Map of functions that the server are able to
 //  emit to the client. (either via direct emit() or broadcast())
@@ -97,6 +98,7 @@ function corewsplugin<
   Broadcasts extends PushMap,
   RPCs extends RPCMap<Broadcasts>
 >(opts: {
+  name: string,
   broadcasts: Broadcasts,
   rpcs: RPCs,
   onServe:
@@ -104,21 +106,22 @@ function corewsplugin<
   onPublish:
   (server: Bun.Server<undefined>, message: OutputPayload) => void,
   decode:
-  (message: string | Buffer<ArrayBuffer>) => { name: string, args: any[] },
+  (message: string | Buffer<ArrayBuffer>) => WebSocketPayload.toServer,
   encode:
-  (eventName: string, data: any) => OutputPayload
+  (payload: WebSocketPayload.toClient) => OutputPayload
 }) {
   const plugin = createCoreWebSocketPlugin({
+    name: opts.name,
     handleWsMessage: async (message, ws, server) => {
       const decoded = opts.decode(message)
-      if (decoded.name in opts.rpcs === false) return "RPC not found"
-      const rpcHandler = opts.rpcs[ decoded.name ]
+      if (decoded.type in opts.rpcs === false) return "RPC not found"
+      const rpcHandler = opts.rpcs[ decoded.type ]
       const rpcWsClient = createRPCWSClient(ws, server,
-        (evName, data) => opts.onPublish(server, opts.encode(evName, data)),
-        (evName, data) => ws.send(opts.encode(evName, data))
+        (evName, data) => opts.onPublish(server, opts.encode({ type: evName, data })),
+        (evName, data) => ws.send(opts.encode({ type: evName, data }))
       )
       const result = await rpcHandler(rpcWsClient, ...decoded.args)
-      rpcWsClient.ws.send(opts.encode(decoded.name, result))
+      rpcWsClient.ws.send(opts.encode({ type: decoded.type, data: result }))
       return "RPC result sent back to client"
     },
     onServe: async (server) => {
@@ -126,7 +129,7 @@ function corewsplugin<
         server: server,
         broadcast: typedPusher(
           (evName, data) => opts.onPublish(server,
-            opts.encode(evName, opts.broadcasts[ evName ](data))
+            opts.encode({ type: evName, data: opts.broadcasts[ evName ](data) })
           ),
         )
       }
@@ -142,7 +145,9 @@ function corewsplugin<
   }
 }
 
+// Test
 const rpcwsplugin = corewsplugin({
+  name: "test",
   onPublish: (server, message) => server.publish("global", message),
   onServe: async () => undefined,
   decode: () => 0 as any,
@@ -194,31 +199,23 @@ export function wsplugin<
   onServe?:
   (server: WSPluginServerClient<Broadcasts>) => MaybePromise<void>,
 
+  name: string,
   // Optional parameters
   onPublish?:
   (server: Bun.Server<undefined>, message: OutputPayload) => void,
   decode?:
-  (message: string | Buffer<ArrayBuffer>) => { name: string, args: any[] },
+  (message: string | Buffer<ArrayBuffer>) => WebSocketPayload.toServer,
   encode?:
-  (eventName: string, data: any) => OutputPayload
+  (payload: WebSocketPayload.toClient) => OutputPayload
 }) {
   return corewsplugin({
+    name: opts.name,
     broadcasts: opts.broadcasts ?? {} as Broadcasts,
     rpcs: opts.rpcs ?? {} as RPCs,
     onServe: opts.onServe ?? (async () => { }),
-    onPublish: opts.onPublish ??
-      ((server, message) => server.publish("global", message)),
-    decode: opts.decode ??
-      ((message) => {
-        const decoded = JSON.parse(message.toString())
-        if (typeof decoded !== "object" || decoded === null || typeof decoded.name !== "string" || !Array.isArray(decoded.args))
-          throw new Error(`Invalid message format: ${ message }, decoded: ${ decoded }`)
-        return decoded
-      }),
-    encode: opts.encode ??
-      ((eventName, data) =>
-        JSON.stringify({ name: eventName, data: data })
-      )
+    onPublish: opts.onPublish ?? ((server, message) => server.publish("global", message)),
+    decode: opts.decode ?? WebSocketPayload.decodeFromClient,
+    encode: opts.encode ?? WebSocketPayload.encodeToClient
   })
 }
 
@@ -226,6 +223,7 @@ export function wsplugin<
 // testsswe
 // Case of no broadcast
 wsplugin({
+    name: "test",
   rpcs: {
     a: async (ws) => {
 
@@ -239,6 +237,7 @@ wsplugin({
 
 // Case of yes broadcast
 wsplugin({
+  name: "test",
   broadcasts: {
     time: () => new Date(Date.now())
   },

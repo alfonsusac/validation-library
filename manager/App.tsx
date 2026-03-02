@@ -1,48 +1,41 @@
 // import { createPackageJsonClient } from "./lib/package-json-client"
 // import { ProjectSettings } from "./app/ProjectSettings"
-import { useEffect } from "react"
 import { $JSONFetchRoutesType } from "../index"
-import { createWebSocket } from "./lib/client-ws"
 import { createJsonFetcher } from "./lib/fetch-schema"
+import { createWebSocketCore, WebSocketContext } from "./lib/websocket-client-core"
+import { RootLayout } from "./app/pages/RootLayout"
+import { AppSocketContext, createAppSocket } from "./app/app-ws"
+import { useEffect, useState } from "react"
+import { createPackageJsonClient, PackageJsonStoreContext } from "./features/package-json-client"
 
-console.log("App.tsx - reloaded")
 import.meta.hot.accept()
+const ws = createAppSocket('ws://localhost:3000/ws')
+import.meta.hot.dispose(ws.cleanup)
 
-export const ws = createWebSocket('ws://localhost:3000/ws')
-import.meta.hot.dispose(() => ws.cleanup())
-import.meta.hot.dispose(() => console.log("App.tsx - cleaning up "))
-
-const cleanup = ws.subscribeMessage(e => console.log("[app] [global]"))
-import.meta.hot.dispose(() => cleanup())
-
-// appWs
+const packageJsonStore = createPackageJsonClient(ws)
 
 
-// export const [ usePackageJson ] = createPackageJsonClient()
 export const fetchServer = createJsonFetcher<typeof $JSONFetchRoutesType>()
 
+// export const [ usePackageJson ] = createPackageJsonClient()
+
 export function App() {
+  // useEffect(() => {
+  //   console.log("App mounted")
+  //   return () => console.log("App unmounted")
+  // })
 
-  // This is how you listen to ws with useEffect
-  useEffect(() => {
-    return ws.subscribeMessage(e => console.log("[app] [useEffect]"))
-  })
+  const [ count, setCount ] = useState(0)
 
 
-
-  // const [ packageJSON ] = usePackageJson()
   return (
-    <div className="bg-bg text-fg min-w-screen min-h-screen p-4">
-      <div className="font-semibold text-sm text-fg3">Package Manager</div>
-      {/* <h1 className="font-mono text-2xl break-all">{packageJSON?.name}</h1>
-      <div className="pb-12" />
-        
-      <h2 className="font-medium text-xl text-fg4">Project Settings</h2>
-      {packageJSON ? <ProjectSettings packageJSON={packageJSON} /> : null} */}
+    <AppSocketContext.Provider value={ws}>
+      <PackageJsonStoreContext.Provider value={packageJsonStore}>
+        <RootLayout>
+          <button onClick={() => setCount(count + 1)}>Increment in App {count}</button><br />
 
-      <footer className="pt-20">
-
-      </footer>
-    </div>
+        </RootLayout>
+      </PackageJsonStoreContext.Provider>
+    </AppSocketContext.Provider>
   )
 }

@@ -1,24 +1,6 @@
-import { ws } from "../App"
+import type { WebSocketClientCore } from "./__app-types"
 
 console.log("app-store.tsx reloaded")
-
-// import.meta.hot.accept("../App", newModule => {
-
-// })
-
-// export function appWs() {
-//   const subscribe = (cb: (data: any) => void) => {
-//     ws.subscribeMessage(message => {
-//       const data = JSON.parse(message.data)
-//       cb(data.data)
-//     })
-//   }
-//   return { subscribe }
-// }
-
-ws.subscribeMessage(e => {
-  console.log("[app-store] [global]")
-})
 
 
 
@@ -32,15 +14,42 @@ ws.subscribeMessage(e => {
 // 
 //  * must be called outside of react components
 
-export function appStore<T>(
-  name: string,
+export function createAppStore<T>(
+  ws: WebSocketClientCore,
   opts: {
     requestData: (ws: WebSocket) => void,
     requestUpdate: (ws: WebSocket, newData: T) => void,
     onMessage: (event: MessageEvent<any>) => T | undefined,
   }
 ) {
+  return function useAppStore() {
 
+  }
+  //   // Global Store
+  //   const [ useCachedStore, updateCachedStore, getCachedStore ] = createGlobalStore(name, () => null as T | null)
+
+  //   function onWsStoreMessageHandler(this: WebSocket, event: MessageEvent<any>) {
+  //     const newData = cb.onMessage(event)
+  //     if (newData !== undefined) updateCachedStore(newData)
+  //   }
+
+  //   getWs().addEventListener("message", onWsStoreMessageHandler)
+  //   if (import.meta.hot) {
+  //     import.meta.hot.on("bun:beforeUpdate", () => {
+  //       getWs().removeEventListener("message", onWsStoreMessageHandler)
+  //     })
+  //     // DO NOT FORGET to re-register the event listener after update, 
+  //     //  otherwise the store will not receive server push updates after HMR update.
+  //     import.meta.hot.on("bun:afterUpdate", () => {
+  //       getWs().addEventListener("message", onWsStoreMessageHandler)
+  //     })
+  //   }
+
+
+  // function onWsStoreMessageHandler(this: WebSocket, event: MessageEvent<any>) {
+  //   const newData = cb.onMessage(event)
+  //   if (newData !== undefined) updateCachedStore(newData)
+  // }
 }
 
 

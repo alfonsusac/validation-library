@@ -2,11 +2,15 @@ export class Listener<Data> {
 
   private listeners = new Set<(data: Data) => void>()
 
-  add(listener: (data: Data) => void) {
-    this.listeners.add(listener)
+  add(listener: (data: Data) => void, opts?: { once?: boolean }) {
+    const handler = (data: Data) => {
+      listener(data)
+      if (opts?.once) this.remove(handler)
+    }
+    this.listeners.add(handler)
   }
-  subscribe(listener: (data: Data) => void) {
-    this.add(listener)
+  subscribe(listener: (data: Data) => void, opts?: { once?: boolean }) {
+    this.add(listener, opts)
     return () => this.remove(listener)
   }
   remove(listener: (data: Data) => void) {
@@ -35,11 +39,15 @@ export class EventListener<L extends ListenerMap> {
 
   private listeners = new Map<keyof L, Listener<L[ keyof L ]>>
 
-  subscribe<N extends keyof L>(event: N, listener: (...data: L[ N ]) => void) {
+  subscribe<N extends keyof L>(
+    event: N,
+    listener: (...data: L[ N ]) => void,
+    opts?: { once?: boolean }
+  ) {
     let l = this.listeners.get(event)
     if (!l) l = this.listeners.set(event, new Listener).get(event)!
     const handler = (data: L[ keyof L ]) => listener(...data as L[ N ])
-    l.add(handler)
+    l.add(handler, opts)
     return () => l.remove(handler)
   }
 

@@ -1,13 +1,14 @@
 import { createJsonFetchClient } from "./lib/fetch-schema"
 import { createCache } from "./lib/lib-cache"
 import { packageJson } from "./features/package-json"
-import root from "./entry.html"
 import { getSettings, saveSettings } from "./lib/app-settings"
 import { createWebSocketController } from "./lib/websocket-core"
 import { pinger } from "./features/ping"
+import { renderToString } from "react-dom/server"
 
 
-export const startManager = () => {
+
+export const startManager = async () => {
   console.log("Starting server...")
 
   const cache = createCache({ store: new Map<string, any>() })
@@ -15,7 +16,6 @@ export const startManager = () => {
     packageJson.websocketPlugin,
     pinger,
   ])
-
 
   const { routeHandlers, $JSONFetchRoutesType } = createJsonFetchClient({
     "GET:/settings": getSettings,
@@ -45,26 +45,32 @@ export const startManager = () => {
           }[]
         })()
       },
+  })
 
+  // Generate the HTML file with the React app rendered on the server
+  await renderRoot({
+    routeName: '/index.html',
+    title: "Fullstack Bun App",
   })
 
   const server = Bun.serve({
     routes: {
-      "/": root,
+      "/": (await import("./app/index.html")).default,
       "/ws": upgradeWsRoute,
       ...routeHandlers,
     },
     websocket: {
       open(ws) {
-        console.log("WebSocket connection opened. Count:", server.pendingWebSockets)
+        console.log("Client connected. Count:", server.pendingWebSockets)
         ws.subscribe("global")
       },
       close(ws, code, reason) {
-        console.log(`WebSocket connection closed. Code: ${ code }, Reason: ${ reason }. Count:`, server.pendingWebSockets)
+        console.clear()
+        console.log(`Client closed. Code: ${ code }, Reason: ${ reason }. Count:`, server.pendingWebSockets)
         ws.unsubscribe("global")
       },
       message(ws, message) {
-        console.log("[ws-message]", message.slice(0, 20)) // log first 20 chars for brevity
+        // console.log("[ws-message]", message.slice(0, 20)) // log first 20 chars for brevity
         wsHandler.handleWsMessage(message, ws, server)
       },
     },
@@ -95,4 +101,33 @@ export const startManager = () => {
 function upgradeWsRoute(req: Bun.BunRequest<"/ws">, server: Bun.Server<undefined>) {
   if (server.upgrade(req)) return undefined // upgrade() will handle the response.
   else return new Response("WebSocket upgrade failed", { status: 400 })
+}
+
+
+async function renderRoot({
+  routeName = '/index.html',
+  title = "Fullstack Bun App",
+  payload = {},
+}: {
+  routeName: string,
+  title: string,
+  payload?: any,
+}) {
+  // Generate the HTML file with the React app rendered on the server
+  await Bun.write(import.meta.dir + '/app' + routeName, "<!-- This file is generated from Server.tsx -->\n" + renderToString(
+    <html>
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{title}</title>
+        <link rel="stylesheet" href="../app/styles.css" />
+      </head>
+      <body>
+        <div id="root"></div>
+        <div id="payload" data-payload={JSON.stringify(payload)}></div>
+        <script type="module" src="../app/Root.tsx"></script>
+      </body>
+    </html>
+  ))
+
 }

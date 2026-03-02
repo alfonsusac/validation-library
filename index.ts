@@ -4,4 +4,4 @@ import { startManager } from "./manager/Server"
 
 export const { 
   $JSONFetchRoutesType,
-} = startManager()
+} = await startManager()

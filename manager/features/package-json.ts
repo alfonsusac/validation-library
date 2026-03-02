@@ -29,13 +29,6 @@ export function parsePackageJSON(input: unknown) {
 }
 
 
-export type PackageJsonEventSchema = {
-  getPackageJSON: () => PackageJson,
-  updatePackageJSON: (newData: PackageJson) => undefined,
-}
-
-
-
 export const packageJson = {
 
   fileWatcher: createTextFileWatcher('./package.json', {
@@ -50,15 +43,15 @@ export const packageJson = {
     }
   }),
 
-
   websocketPlugin: wsplugin({
+    name: "packageJson",
     broadcasts: {
       "updated:packageJSON": (content: PackageJson) => content
     },
     rpcs: {
       getPackageJSON: () => packageJson.fileWatcher.read(),
       updatePackageJSON: (ws, newData: PackageJson) => {
-        return Bun.write('./package.json', JSON.stringify(newData, null, 2))
+        Bun.write('./package.json', JSON.stringify(newData, null, 2))
       }
     },
     onServe(server) {
@@ -68,40 +61,9 @@ export const packageJson = {
     },
   }),
 
-
-
-  ws: serverWs<PackageJsonEventSchema>(),
-
-  // realtimeHandler: {
-
-  //   handleWsMessage(
-  //     message: string | Buffer<ArrayBuffer>,
-  //     ws: Bun.ServerWebSocket,
-  //   ) {
-  //     packageJson.ws.handleMessage(message, {
-  //       'getPackageJSON': async () => {
-  //         const packageJsonData = await packageJson.fileWatcher.read()
-  //         packageJson.ws.emit(ws, "getPackageJSON", packageJsonData)
-  //       },
-  //       'updatePackageJSON': async (newData) => {
-  //         await Bun.write('./package.json', JSON.stringify(newData, null, 2))
-  //       }
-  //     })
-  //   },
-
-  //   onServe(server) {
-  //     packageJson.fileWatcher.onChange(content => {
-  //       server.publish("global",
-  //         packageJson.ws.getPayload("getPackageJSON", content)
-  //       )
-  //       // packageJson.ws.publish(server, "global", "getPackageJSON", content)
-  //     })
-  //   },
-
-
-
-  // } satisfies WebSocketPlugin
 }
+
+export type PackageJsonEventSchema = typeof packageJson.websocketPlugin.$schema
 
 
 
