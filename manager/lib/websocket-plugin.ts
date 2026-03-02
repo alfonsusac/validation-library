@@ -38,7 +38,7 @@ type TypedPusher<Map extends PushMap> =
 function typedPusher<Map extends PushMap>(implementation: (N: string, ...data: any[]) => void) {
   return function push<EvName extends keyof Map & string>
     (name: EvName, ...data: Parameters<Map[ EvName ]>) {
-    implementation(name, data)
+    implementation(name, ...data)
   }
 }
 
@@ -128,9 +128,11 @@ function corewsplugin<
       const wsPluginServerClient: WSPluginServerClient<Broadcasts> = {
         server: server,
         broadcast: typedPusher(
-          (evName, data) => opts.onPublish(server,
-            opts.encode({ type: evName, data: opts.broadcasts[ evName ](data) })
-          ),
+          (evName, data) => {
+            opts.onPublish(server,
+              opts.encode({ type: evName, data: opts.broadcasts[ evName ](data) })
+            )
+          },
         )
       }
       await opts.onServe(wsPluginServerClient)
@@ -213,7 +215,9 @@ export function wsplugin<
     broadcasts: opts.broadcasts ?? {} as Broadcasts,
     rpcs: opts.rpcs ?? {} as RPCs,
     onServe: opts.onServe ?? (async () => { }),
-    onPublish: opts.onPublish ?? ((server, message) => server.publish("global", message)),
+    onPublish: opts.onPublish ?? ((server, message) => {
+      server.publish("global", message)
+    }),
     decode: opts.decode ?? WebSocketPayload.decodeFromClient,
     encode: opts.encode ?? WebSocketPayload.encodeToClient
   })
@@ -223,7 +227,7 @@ export function wsplugin<
 // testsswe
 // Case of no broadcast
 wsplugin({
-    name: "test",
+  name: "test",
   rpcs: {
     a: async (ws) => {
 

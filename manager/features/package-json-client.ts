@@ -18,7 +18,10 @@ export function createPackageJsonStore(ws: AppSocket) {
   wsClient.subscribe("getPackageJSON", (data) => {
     store.update(data)
   })
-  wsClient.subscribe("updated:packageJSON", (data) => store.update(data))
+  wsClient.subscribe("updated:packageJSON", (data) => {
+    // console.log("updated:packageJSON", data)
+    store.update(data)
+  })
   // request initial data
   wsClient.emitOnceOpen("getPackageJSON")
 

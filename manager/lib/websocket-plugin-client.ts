@@ -36,7 +36,7 @@ export function createWsPluginClient<
     ...args: S[ 'rpcs' ][ N ] extends (first: any, ...args: infer A) => any ? A : never
   ) {
     const readyState = opts.getReadyState()
-    console.log("[clientWsPlugin] emitOnceOpen", evName, "readyState:", readyState)
+    // console.log("[clientWsPlugin] emitOnceOpen", evName, "readyState:", readyState)
     const send = () => opts.send(WebSocketPayload.encodeToServer({ type: evName, args: args }))
     if (readyState === WebSocket.CLOSED)
       throw new Error(`[clientWsPlugin] WebSocket is closed, cannot emit event ${ evName }`)
