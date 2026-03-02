@@ -34,7 +34,11 @@ export function global<T>(
   function get() { return root.store[ id ].store as T }
   function set(value: T) { root.store[ id ].store = value }
 
-  return [ get, set ] as const
+  return [ root.store[ id ].store as T, set, get ] as [
+    value: T,
+    set: (value: T) => void,
+    get: () => T
+  ]
 }
 
 
@@ -67,9 +71,9 @@ if (import.meta.hot) {
 
 // // aaa
 
-// import.meta.hot.on("bun:afterUpdate", () => {
-//   console.log("[hmr]: bun:afterUpdate, current value:", val)
-// })
+import.meta.hot.on("bun:afterUpdate", () => {
+  console.log("[hmr]: bun:afterUpdate, current value:", val)
+})
 // import.meta.hot.on("bun:beforeFullReload", () => {
 //   console.log("[hmr]: bun:beforeFullReload, current value:", val)
 // })

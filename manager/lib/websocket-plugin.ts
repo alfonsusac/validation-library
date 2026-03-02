@@ -85,6 +85,11 @@ type RPCMap<Broadcasts extends PushMap> =
 
 type OutputPayload = string | Bun.ArrayBufferView | ArrayBuffer | SharedArrayBuffer
 
+export type PluginSchema = {
+  broadcasts: PushMap,
+  rpcs: RPCMap<any>
+}
+
 // To be passed into createWebSocketController.
 // Errors will be caught and logged by the controller,
 //  so no need to wrap with try/catch.
@@ -103,7 +108,7 @@ function corewsplugin<
   encode:
   (eventName: string, data: any) => OutputPayload
 }) {
-  return createCoreWebSocketPlugin({
+  const plugin = createCoreWebSocketPlugin({
     handleWsMessage: async (message, ws, server) => {
       const decoded = opts.decode(message)
       if (decoded.name in opts.rpcs === false) return "RPC not found"
@@ -120,12 +125,21 @@ function corewsplugin<
       const wsPluginServerClient: WSPluginServerClient<Broadcasts> = {
         server: server,
         broadcast: typedPusher(
-          (evName, data) => opts.onPublish(server, opts.encode(evName, data)),
+          (evName, data) => opts.onPublish(server,
+            opts.encode(evName, opts.broadcasts[ evName ](data))
+          ),
         )
       }
       await opts.onServe(wsPluginServerClient)
     },
   })
+  return {
+    ...plugin,
+    $schema: {} as {
+      broadcasts: Broadcasts,
+      rpcs: RPCs
+    }
+  }
 }
 
 const rpcwsplugin = corewsplugin({
@@ -203,11 +217,13 @@ export function wsplugin<
       }),
     encode: opts.encode ??
       ((eventName, data) =>
-        JSON.stringify({ name: eventName, args: data })
+        JSON.stringify({ name: eventName, data: data })
       )
   })
 }
 
+
+// testsswe
 // Case of no broadcast
 wsplugin({
   rpcs: {
@@ -232,3 +248,5 @@ wsplugin({
     }
   }
 })
+
+

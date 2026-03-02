@@ -1,6 +1,6 @@
 import { appStore } from "../app/app-store"
-import type { PackageJson, PackageJsonEventSchema } from "./package-json"
-import { clientWs } from "./socket-core"
+import type { PackageJson, PackageJsonEventSchema } from "../lib/package-json"
+import { clientWs } from "../lib/socket-core"
 
 export function createPackageJsonClient() {
 

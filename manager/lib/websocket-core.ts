@@ -51,19 +51,6 @@ export function createWebSocketController(
     },
 
     publishOnChange(server: Bun.Server<undefined>) {
-      const publishFn = ( // is a dependency
-        data: string | Bun.ArrayBufferView | ArrayBuffer | SharedArrayBuffer,
-        compress?: boolean,
-      ) => server.publish("global", data, compress)
-
-      // for (const plugin of plugins) {
-      //   try {
-      //     await plugin.onServe(server)
-      //   } catch (error) {
-      //     console.error("[ws-core] Error calling onServe\n", error)
-      //   }
-      // }
-
       Promise.all(plugins.map(async plugin => {
         try {
           await plugin.onServe(server)

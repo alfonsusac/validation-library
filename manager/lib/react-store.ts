@@ -12,7 +12,7 @@ export function createGlobalStore<T>(
   // - Survives hot reloads,
   // - is shared across the app
   // - reacts to changes with listeners 
-  const [ getGlobal ] = global(`__app_${ name }_store`, () => {
+  const [ _, __, getGlobal ] = global(`__app_${ name }_store`, () => {
     return ({
       data: init(),
       listeners: new Listener<T>()

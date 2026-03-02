@@ -1,9 +1,10 @@
 import { createJsonFetchClient } from "./lib/fetch-schema"
 import { createCache } from "./lib/lib-cache"
-import { packageJson } from "./lib/package-json"
+import { packageJson } from "./features/package-json"
 import root from "./entry.html"
 import { getSettings, saveSettings } from "./lib/app-settings"
 import { createWebSocketController } from "./lib/websocket-core"
+import { pinger } from "./features/ping"
 
 
 export const startManager = () => {
@@ -11,7 +12,8 @@ export const startManager = () => {
 
   const cache = createCache({ store: new Map<string, any>() })
   const wsHandler = createWebSocketController([
-    packageJson.websocketPlugin
+    packageJson.websocketPlugin,
+    pinger,
   ])
 
 

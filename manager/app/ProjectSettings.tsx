@@ -197,7 +197,7 @@ const BasicField = <T,>({
 
 function ProjectNameInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson(true)
-  // const [ isCheckAvailEnabled, setIsCheckAvailEnabled ] = useState(false)
+  const [ isCheckAvailEnabled, setIsCheckAvailEnabled ] = useState(false)
   const field = useField(packageJson.name, {
     validate: (value) => packageJsonParser.name.validate(value, () => false),
     warn: packageJsonParser.name.warn,
