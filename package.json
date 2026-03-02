@@ -32,9 +32,7 @@
   "homepage": "https://www.github.com",
   "keywords": [
     "react",
-    "rs",
-    "parser",
-    "ts"
+    "rs"
   ],
   "bugs": {
     "url": "https://www.google.com"

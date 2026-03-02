@@ -1,4 +1,4 @@
-export function onExit(callback: () => void) {
+export function onProcessExit(callback: () => void) {
   process.on("exit", callback)
   process.on("SIGINT", () => {
     console.log("\nExiting...")

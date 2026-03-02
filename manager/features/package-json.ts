@@ -1,4 +1,3 @@
-import { serverWs } from '../lib/socket-core'
 import { createTextFileWatcher } from '../lib/core-file-watcher'
 import { wsplugin } from '../lib/websocket-plugin'
 
@@ -44,7 +43,7 @@ export const packageJson = {
   }),
 
   websocketPlugin: wsplugin({
-    name: "packageJson",
+    name: "package-json",
     broadcasts: {
       "updated:packageJSON": (content: PackageJson) => content
     },

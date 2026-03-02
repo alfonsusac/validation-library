@@ -1,6 +1,5 @@
 import { RootLayout } from "./app/pages/RootLayout"
 import { AppSocketContext, createAppSocket } from "./app/app-ws"
-import { useState } from "react"
 import { createPackageJsonStore, PackageJsonStoreContext } from "./features/package-json-client"
 
 import.meta.hot.accept()
@@ -10,9 +9,6 @@ import.meta.hot.dispose(ws.cleanup)
 const packageJsonStore = createPackageJsonStore(ws)
 
 export function App() {
-
-  const [ count, setCount ] = useState(0)
-
 
   return (
     <AppSocketContext.Provider value={ws}>

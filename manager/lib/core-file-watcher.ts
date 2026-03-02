@@ -1,5 +1,5 @@
 import { watch as fswatch } from "node:fs"
-import { onExit } from "./server-cleanup"
+import { onProcessExit } from "./server-cleanup"
 import { Listener } from "./util-listener"
 
 
@@ -39,7 +39,8 @@ export function createTextFileWatcher<T = string>(
       console.error(`[File-Watcher] Error reading file ${ path } on change:\n`, error)
     }
   })
-  onExit(() => {
+
+  onProcessExit(() => {
     try {
       listeners.clear()
       watcher.close()
@@ -55,7 +56,6 @@ export function createTextFileWatcher<T = string>(
   return {
     read,
     write,
-
     onChange,
   }
 }

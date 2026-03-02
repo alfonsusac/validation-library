@@ -19,7 +19,6 @@ export function createPackageJsonStore(ws: AppSocket) {
     store.update(data)
   })
   wsClient.subscribe("updated:packageJSON", (data) => {
-    // console.log("updated:packageJSON", data)
     store.update(data)
   })
   // request initial data
@@ -27,7 +26,6 @@ export function createPackageJsonStore(ws: AppSocket) {
 
   function update(payload: Partial<PackageJson>) {
     const prev = store.get()
-    // console.log(payload, prev)
     if (!prev) return console.log("Update failed")
     wsClient.emitOnceOpen("updatePackageJSON", {
       ...prev,
@@ -60,25 +58,3 @@ export function usePackageJson<R extends boolean = false>(required?: R) {
     updatePackageJson: store.update,
   }
 }
-
-// export function createPackageJsonClient() {
-
-//   const client = clientWs<PackageJsonEventSchema>()
-
-//   return createAppStore<PackageJson>("packageJSON", {
-//     requestData(ws) {
-//       client.emit(ws, "getPackageJSON")
-//     },
-//     requestUpdate(ws, data) {
-//       client.emit(ws, "updatePackageJSON", data)
-//     },
-//     onMessage(event) {
-//       const data = JSON.parse(event.data)
-//       if (data.type === "getPackageJSON") {
-//         return data.data as PackageJson
-//       }
-//       return undefined
-//     }
-//   })
-
-// }
