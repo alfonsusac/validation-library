@@ -1,6 +1,6 @@
 
 import type { MaybePromise } from "bun"
-import { createCoreWebSocketPlugin } from "./websocket-core"
+import { wsControllerHandler } from "./ws-core"
 import { WebSocketPayload } from "./websocket-payload"
 
 // A Map of functions that the server are able to
@@ -110,9 +110,9 @@ function corewsplugin<
   encode:
   (payload: WebSocketPayload.toClient) => OutputPayload
 }) {
-  const plugin = createCoreWebSocketPlugin({
+  const plugin = wsControllerHandler({
     name: opts.name,
-    handleWsMessage: async (message, ws, server) => {
+    handleMessage: async (message, { ws, server }) => {
       const decoded = opts.decode(message)
       if (decoded.type in opts.rpcs === false) return "RPC not found"
       const rpcHandler = opts.rpcs[ decoded.type ]

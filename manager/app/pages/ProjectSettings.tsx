@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type ComponentProps, typ
 import { cn } from "lazy-cn"
 import { useAsync } from "../../lib/react-async"
 import type { MaybePromise } from "bun"
-import { checkNPMName, fetchServer } from "../app-fetches"
+import { checkNPMName } from "../app-fetches"
 import { usePackageJson } from "../../features/package-json-client"
 import { packageJsonParser } from "../../features/package-json-validations"
 
@@ -553,8 +553,8 @@ function ProjectLicenseInput() {
     if (val === "") return "ok" // no license means "All rights reserved", which is valid
     // await new Promise(resolve => setTimeout(resolve, Math.random() * 2500))
     if (signal.aborted) throw 0
-    const res = await fetchServer("GET:/sdpx-licenses")
-    return res.map((license) => license.id).includes(val) ? "ok" : "license not found in SPDX list"
+    // const res = await fetchServer("GET:/sdpx-licenses")
+    // return res.map((license) => license.id).includes(val) ? "ok" : "license not found in SPDX list"
   }, [ val ])
 
   return <div>

@@ -1,4 +1,4 @@
-import { createTextFileWatcher } from '../lib/core-file-watcher'
+import { fileWatcher } from '../lib/ws-file-watcher'
 import { wsplugin } from '../lib/websocket-plugin'
 
 export type PackageJson = {
@@ -30,7 +30,7 @@ export function parsePackageJSON(input: unknown) {
 
 export const packageJson = {
 
-  fileWatcher: createTextFileWatcher('./package.json', {
+  fileWatcher: fileWatcher('./package.json', {
     decode: async file => {
       const content = JSON.parse(await file.text())
       const parsed = parsePackageJSON(content)
@@ -50,7 +50,7 @@ export const packageJson = {
     rpcs: {
       getPackageJSON: () => packageJson.fileWatcher.read(),
       updatePackageJSON: async (ws, newData: PackageJson) => {
-        await Bun.write('./package.json', JSON.stringify(newData, null, 2))
+        await packageJson.fileWatcher.write(newData)
       }
     },
     onServe(server) {

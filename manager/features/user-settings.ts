@@ -1,8 +1,8 @@
-import { createTextFileWatcher } from "../lib/core-file-watcher"
+import { fileWatcher } from "../lib/ws-file-watcher"
 import { wsplugin } from "../lib/websocket-plugin"
 
 export const userSettings = {
-  fileWatcher: createTextFileWatcher('./manager/settings.json', {
+  fileWatcher: fileWatcher('./manager/settings.json', {
     decode: async file => {
       try {
         return JSON.parse(await file.text())

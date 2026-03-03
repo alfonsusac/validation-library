@@ -1,9 +1,9 @@
-import type { $JSONFetchRoutesType } from "../.."
+// import type { $JSONFetchRoutesType } from "../.."
 import { jfetch } from "../lib/fetch"
 import { createJsonFetcher } from "../lib/fetch-schema"
 
 
-export const fetchServer = createJsonFetcher<typeof $JSONFetchRoutesType>()
+// export const fetchServer = createJsonFetcher<typeof $JSONFetchRoutesType>()
 
 
 

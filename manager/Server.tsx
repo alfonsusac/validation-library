@@ -1,51 +1,19 @@
-import { createJsonFetchClient } from "./lib/fetch-schema"
-import { createCache } from "./lib/lib-cache"
 import { packageJson } from "./features/package-json"
-import { getSettings, saveSettings } from "./lib/app-settings"
-import { createWebSocketController } from "./lib/websocket-core"
+import { wsController } from "./lib/ws-core"
 import { pinger } from "./features/ping"
 import { renderToString } from "react-dom/server"
+import { textFileController } from "./lib/file-controller"
+import { appServer, EventPublisher, EventRouter, publisher, RPCFetch, RPCServer, WsHandler } from "./lib/ws2-core"
 
 
 
 export const startManager = async () => {
   console.log("Starting server...")
 
-  const cache = createCache({ store: new Map<string, any>() })
-  const wsHandler = createWebSocketController([
+  const wsc = wsController([
     packageJson.websocketPlugin,
     pinger,
   ])
-
-  const { routeHandlers, $JSONFetchRoutesType } = createJsonFetchClient({
-    "GET:/settings": getSettings,
-    "POST:/settings": saveSettings,
-    "GET:/fetch-test":
-      async (query: { text: string }) => {
-        await new Promise(resolve => setTimeout(resolve,
-          Math.random() * 2000 + 500
-        ))
-        return `Echo: ${ query.text }`
-      },
-    "GET:/sdpx-licenses":
-      async () => {
-        return cache(async () => {
-          const res = await fetch("https://raw.githubusercontent.com/spdx/license-list-data/refs/heads/main/json/licenses.json")
-          if (!res.ok) throw new Error(`Failed to fetch SPDX licenses: ${ res.status } ${ res.statusText }`)
-          const json = await res.json()
-          const data = json.licenses.map((license: any) => ({
-            id: license.licenseId,
-            name: license.name,
-            isOsiApproved: license.isOsiApproved,
-          }))
-          return data as {
-            id: string
-            name: string
-            isOsiApproved: boolean
-          }[]
-        })()
-      },
-  })
 
   // Generate the HTML file with the React app rendered on the server
   await renderRoot({
@@ -53,46 +21,113 @@ export const startManager = async () => {
     title: "Fullstack Bun App",
   })
 
+  const rpcFetch = RPCFetch({
+    methods: {
+      "getTime": () => new Date().toISOString(),
+      "getRandomNumber": () => Math.random(),
+    }
+  })
+
   const server = Bun.serve({
-    routes: {
-      "/": (await import("./app/index.html")).default,
-      "/ws": upgradeWsRoute,
-      ...routeHandlers,
+    development: {
+      console: true,
     },
-    websocket: {
-      open(ws) {
-        console.log("Client connected. Count:", server.pendingWebSockets)
-        ws.subscribe("global")
-      },
-      close(ws, code, reason) {
-        // console.clear()
-        // console.log(`Client closed. Code: ${ code }, Reason: ${ reason }. Count:`, server.pendingWebSockets)
-        ws.unsubscribe("global")
-      },
-      message(ws, message) {
-        console.log("[ws-message]", message.slice(0, 20)) // log first 20 chars for brevity
-        wsHandler.handleWsMessage(message, ws, server)
-      },
-    },
-    // Fallback for unmatched routes
     fetch(req) {
       console.log(`Received request for ${ req.url } ${ req.method }`)
       return new Response("Not Found", { status: 404 })
     },
+    routes: {
+      "/": (await import("./app/index.html")).default,
+      "/ws": upgradeWsRoute,
+      ...rpcFetch.routeMap,
+    },
+    websocket: {
+      open(ws) {
+        console.log("Client connected. Count:", server.pendingWebSockets)
+        globalPublisher.subscribe(ws)
+        eventRouter.onOpen(ws)
+      },
+      close(ws) {
+        globalPublisher.unsubscribe(ws)
+        eventRouter.onClose(ws)
+      },
+      message(ws, message) {
+        wsHandler.handleMessage(ws, message)
+      },
+    },
+  })
 
-    development: {
-      console: true,
+
+
+  const wsHandler = WsHandler({
+    handleJson: async (ws, message) => {
+      const res = await eventRouter.handleJson(ws, message)
+      if (res === "unknown schema")
+        console.error("Received message with unknown schema:", message)
     }
   })
 
-  // Update clients with the initial package.json data when file changes
-  wsHandler.publishOnChange(server)
+  const globalPublisher = publisher(server, "global", JSON.stringify)
 
+  const eventPublisher = EventPublisher({
+    // publisher: globalPublisher,
+    publishings: {
+      "pong": (ev) => ({ timestamp: Date.now() }),
+    },
+  })
+  const eventRouter = EventRouter({
+    handlers: {
+      "ping2": (client) => {
+        client.sendEvent("asf", undefined)
+        eventPublisher.publish("pong")
+      },
+      "rpc2": (client, data) => rpcServer.eventHandlers.rpc(client, data)
+    },
+    handle(ws, name, data) {
+      console.log("unknown event received:", name, data)
+    },
+  })
+  const rpcServer = RPCServer({
+    methods: {
+      "getTime": () => new Date().toISOString(),
+      "getRandomNumber": () => Math.random(),
+    },
+  })
+
+  const app = appServer({
+    server,
+    rpc: {
+      methods: {
+        "getTime": () => new Date().toISOString(),
+        "getRandomNumber": (prefix: string) => prefix + Math.random(),
+      }
+    }
+  })
+
+  app._$rpcMap
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  const packageJson2 = textFileController("./package.json", {
+    publish: (data) => globalPublisher.publish(data),
+
+  })
+
+
+  wsc.registerPluginsOnServe(server)
   console.log(`Server running at ${ server.url }`)
-
-  return {
-    $JSONFetchRoutesType
-  }
 }
 
 
@@ -131,3 +166,37 @@ async function renderRoot({
   ))
 
 }
+
+
+
+
+
+
+
+// const { routeHandlers, $JSONFetchRoutesType } = createJsonFetchClient({
+//   "GET:/fetch-test":
+//     async (query: { text: string }) => {
+//       await new Promise(resolve => setTimeout(resolve,
+//         Math.random() * 2000 + 500
+//       ))
+//       return `Echo: ${ query.text }`
+//     },
+//   "GET:/sdpx-licenses":
+//     async () => {
+//       return cache(async () => {
+//         const res = await fetch("https://raw.githubusercontent.com/spdx/license-list-data/refs/heads/main/json/licenses.json")
+//         if (!res.ok) throw new Error(`Failed to fetch SPDX licenses: ${ res.status } ${ res.statusText }`)
+//         const json = await res.json()
+//         const data = json.licenses.map((license: any) => ({
+//           id: license.licenseId,
+//           name: license.name,
+//           isOsiApproved: license.isOsiApproved,
+//         }))
+//         return data as {
+//           id: string
+//           name: string
+//           isOsiApproved: boolean
+//         }[]
+//       })()
+//     },
+// })
