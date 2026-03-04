@@ -8,7 +8,7 @@ import { Pinger } from "./features/pinger"
 
 export const startManager = async () => {
   const publisher = ServerEventPublisher("global", (payload) => {
-    console.log("Publishing global event:", [payload.evName, payload.data])
+    console.log("Publishing global event:", [ payload.evName, payload.data ])
   })
   const packageJson = PackageJson(publisher.publish)
   const pinger = Pinger(publisher.publish)
@@ -16,11 +16,12 @@ export const startManager = async () => {
     publisher,
     methods: {
       "getTime": () => new Date().toISOString(),
-      "getRandomNumber": (prefix: string) => prefix + Math.random(),
+      "getRandomNumber": (prefix: string, suffix: number) => prefix + Math.random() + suffix,
       ...packageJson.methods
     },
     events: {
       ...packageJson.events,
+      ...pinger.events
     },
   })
   publisher.initialize(server.server)

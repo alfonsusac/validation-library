@@ -65,14 +65,14 @@ export function EventPublisher<
 
 // -
 
-export type EventMap = { [ E in string ]: any[] }
+export type EventMap = { [ E in string ]: any }
 export type EventPublisherFn = (evName: string, ...data: any) => void
 export function EventEmitter<
-  P extends { [ E in string ]: [any] }
+  P extends { [ E in string ]: any }
 >(publisherFn: EventPublisherFn) {
   return {
-    publish: <N extends keyof P & string>(name: N, ...data: P[ N ]) => {
-      publisherFn(name, ...data)
+    publish: <N extends keyof P & string>(name: N, data: P[ N ]) => {
+      publisherFn(name, data)
     },
     events: {} as P
   }

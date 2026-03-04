@@ -21,6 +21,8 @@ export function createAppSocket(url: string) {
     ws.send(message)
   }
 
+
+
   return {
     instance: ws,
     readyState: ws.instance.readyState,

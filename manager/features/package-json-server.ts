@@ -7,7 +7,7 @@ export function PackageJson(
 ) {
   const file = WatchJsonFile<PackageJson>('./package.json')
   const publisher = EventEmitter<{
-    'package-json-updated': [ PackageJson ]
+    'package-json-updated': PackageJson
   }>(publisherFn)
 
   const methods = RPCMethods({
@@ -17,7 +17,7 @@ export function PackageJson(
 
   file.subscribe(content => publisher.publish("package-json-updated", content))
   file.initialize()
-  
+
   return ({
     methods: methods,
     events: publisher.events,

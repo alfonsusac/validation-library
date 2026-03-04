@@ -15,7 +15,10 @@ export function fileController<O>(
     listener: new Listener<O>(),
   }
 
-  function get() { return store.content }
+  function get() {
+    if (store.content === undefined) throw new Error("File content not loaded yet. Please call initialize() first.")
+    return store.content
+  }
   async function set(newValue: O) { return await writer(file, newValue) }
 
   async function initialize() {

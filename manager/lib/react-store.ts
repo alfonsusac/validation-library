@@ -17,19 +17,19 @@ export function createCache<T>(
   function subscribe(listener: (data: T) => void) {
     return listeners.subscribe(listener)
   }
-  function useStore() {
-    const data = useSyncExternalStore(subscribe, get, get)
-    return [ data, update ] as [
-      data: typeof data,
-      update: typeof update
-    ]
-  }
+  // function useStore() {
+  //   const data = useSyncExternalStore(subscribe, get, get)
+  //   return [ data, update ] as [
+  //     data: typeof data,
+  //     update: typeof update
+  //   ]
+  // }
   function cleanup() {
     cleanupFn?.(store.data)
     listeners.clear()
   }
   return {
-    useStore,
+    // useStore,
     update,
     get,
     subscribe,
@@ -53,3 +53,37 @@ export function useCacheStore<T>(key: string, initialData: T) {
   }
 }
 
+
+
+
+
+
+
+export function createStore<T>(
+  init: () => T,
+  cleanupFn?: (data: T) => void
+) {
+  let content = init()
+  const listeners = new Listener<T>()
+
+  function get() {
+    return content
+  }
+  function update(newdata: T) {
+    listeners.emit(content = newdata)
+  }
+  function subscribe(listener: (data: T) => void) {
+    return listeners.subscribe(listener)
+  }
+  function cleanup() {
+    cleanupFn?.(content)
+    listeners.clear()
+  }
+  return {
+    update,
+    get,
+    subscribe,
+    cleanup,
+  }
+}
+export type Store<T> = ReturnType<typeof createStore<T>>

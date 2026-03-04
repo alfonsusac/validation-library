@@ -1,28 +1,42 @@
-export class Listener<Data> {
+export class Listener<D> {
 
-  private listeners = new Set<(data: Data) => void>()
+  private listeners = new Set<(data: D) => void>()
+  private wrappedListeners = new Map<(data: D) => void, (data: D) => void>()
 
-  add(listener: (data: Data) => void, opts?: { once?: boolean }) {
-    const handler = (data: Data) => {
-      listener(data)
-      if (opts?.once) this.remove(handler)
+  add(listener: (data: D) => void, opts?: { once?: boolean }) {
+    if (this.listeners.has(listener) || this.wrappedListeners.has(listener)) return
+    if (!opts?.once) {
+      this.listeners.add(listener)
+      return
     }
-    this.listeners.add(handler)
+    const wrapped = (data: D) => {
+      this.remove(listener)
+      listener(data)
+    }
+    this.listeners.add(wrapped)
+    this.wrappedListeners.set(listener, wrapped)
   }
-  subscribe(listener: (data: Data) => void, opts?: { once?: boolean }) {
+  remove(listener: (data: D) => void) {
+    const wrapper = this.wrappedListeners.get(listener)
+    if (wrapper) {
+      this.listeners.delete(wrapper)
+      this.wrappedListeners.delete(listener)
+    } else {
+      this.listeners.delete(listener)
+    }
+  }
+  subscribe(listener: (data: D) => void, opts?: { once?: boolean }) {
     this.add(listener, opts)
     return () => this.remove(listener)
   }
-  remove(listener: (data: Data) => void) {
-    this.listeners.delete(listener)
-  }
-
-  emit(data: Data) {
+  emit(data: D) {
     this.listeners.forEach(listener => listener(data))
   }
-
   length() { return this.listeners.size }
-  clear() { this.listeners.clear() }
+  clear() {
+    this.listeners.clear()
+    this.wrappedListeners.clear()
+  }
 }
 
 
@@ -48,7 +62,9 @@ export class EventListener<L extends ListenerMap> {
     if (!l) l = this.listeners.set(event, new Listener).get(event)!
     const handler = (data: L[ keyof L ]) => listener(...data as L[ N ])
     l.add(handler, opts)
-    return () => l.remove(handler)
+    return () => {
+      l.remove(handler)
+    }
   }
 
   emit<N extends keyof L>(name: N, ...data: L[ N ]) {
