@@ -11,7 +11,7 @@ export const startManager = async () => {
     console.log("Publishing global event:", [ payload.evName, payload.data ])
   })
   const packageJson = PackageJson(publisher.publish)
-  const pinger = Pinger(publisher.publish)
+  // const pinger = Pinger(publisher.publish)
   const server = await appServer({
     publisher,
     methods: {
@@ -21,14 +21,14 @@ export const startManager = async () => {
     },
     events: {
       ...packageJson.events,
-      ...pinger.events
+      // ...pinger.events
     },
   })
   publisher.initialize(server.server)
   onProcessExit(() => {
     server.server.stop()
     packageJson.cleanup()
-    pinger.cleanup()
+    // pinger.cleanup()
   })
   return server
 }

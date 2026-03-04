@@ -105,7 +105,7 @@ export function RPCFetchHandlers<
         const args = body.args
         if (name in opts.methods === false)
           throw new Error("unknown rpc method: " + name)
-        const result = await opts.methods[ name ](args)
+        const result = await opts.methods[ name ](...args)
         return Response.json({ result: result })
       } catch (error) {
         console.error("error handling RPC fetch request:", error)

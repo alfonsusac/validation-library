@@ -1,5 +1,3 @@
-import { useEffect, useMemo } from "react"
-import { createAppClient } from "../lib/server-client"
 import { AppClientContext, useAppClientStore } from "./use-app-client"
 import { TestComponent } from "../AppTest"
 import { useListenPackageJson } from "../features/package-json-client"
@@ -18,17 +16,4 @@ export function App() {
       <TestComponent />
     </AppClientContext>
   )
-
-  // return (
-  //   <AppSocketContext.Provider value={ws}>
-  //     <AppCacheStoreContext.Provider value={store}>
-
-  //     </AppCacheStoreContext.Provider>
-  //     {/* <PackageJsonStoreContext.Provider value={packageJsonStore}> */}
-  //     {/* <RootLayout> */}
-
-  //     {/* </RootLayout> */}
-  //     {/* </PackageJsonStoreContext.Provider> */}
-  //   </AppSocketContext.Provider>
-  // )
 }
