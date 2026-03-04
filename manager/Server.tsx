@@ -7,9 +7,9 @@ import { Pinger } from "./features/pinger"
 
 
 export const startManager = async () => {
-  const publisher = ServerEventPublisher("global", (payload) => {
-    console.log("Publishing global event:", [ payload.evName, payload.data ])
-  })
+  const publisher = ServerEventPublisher("global",
+    (payload) => { console.log("Publishing global event:", [ payload.evName, payload.data ]) }
+  )
   const packageJson = PackageJson(publisher.publish)
   // const pinger = Pinger(publisher.publish)
   const server = await appServer({

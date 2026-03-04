@@ -10,7 +10,6 @@ export function App() {
 
   return (
     <AppClientContext value={client}>
-      Hehe
       <RootLayout>
       </RootLayout>
       <TestComponent />
