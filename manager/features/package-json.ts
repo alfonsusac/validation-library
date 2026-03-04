@@ -33,11 +33,11 @@ export function PackageJson(
   file.subscribe(content => publisher.publish("package-json-updated", content))
   file.initialize()
 
-  return ({
+  return {
     methods: methods,
     events: publisher.events,
     cleanup() { file.cleanup() }
-  })
+  }
 }
 
 

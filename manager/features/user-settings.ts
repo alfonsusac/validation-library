@@ -1,37 +1,27 @@
-import { fileWatcher } from "../lib/ws-file-watcher"
-import { wsplugin } from "../lib/websocket-plugin"
+import { RPCMethods, type EventPublisherFn } from "../lib/ws2-core"
+import { WatchJsonFile } from "../lib/file-controller"
 
-export const userSettings = {
-  fileWatcher: fileWatcher('./manager/settings.json', {
-    decode: async file => {
-      try {
-        return JSON.parse(await file.text())
-      } catch (error) {
-        file.write("{}") // if file is not a valid JSON, reset it to empty object
-        console.warn(`[event-user-settings]: Error parsing settings.json, resetting to empty object.`)
-        return {}
-      }
-    },
-    encode: async data => JSON.stringify(data)
-  }),
-
-  websocketPlugin: wsplugin({
-    name: "user-settings",
-    broadcasts: {
-      "updated:user-settings": (content: Record<string, unknown>) => content
-    },
-    rpcs: {
-      getUserSettings: () => userSettings.fileWatcher.read(),
-      updateUserSettings: async (ws, newData: Record<string, unknown>) => {
-        await userSettings.fileWatcher.write(newData)
-      }
-    },
-    onServe(server) {
-      userSettings.fileWatcher.onChange(content => {
-        server.broadcast("updated:user-settings", content)
-      })
-    }
-  })
+export type UserSettings = {
+  checkProjectNameOnNPM: boolean
 }
 
-export type UserSettingsSchema = typeof userSettings.websocketPlugin.$schema
+export function UserSettings() {
+  const file = WatchJsonFile<UserSettings>('./manager/settings.json', {
+    onNotExist: async (file) => {
+      const defaultSettings: UserSettings = {
+        checkProjectNameOnNPM: false
+      }
+      await file.write(JSON.stringify(defaultSettings, null, 2))
+      return defaultSettings
+    }
+  })
+  const methods = RPCMethods({
+    "getUserSettings": async () => { return file.get() },
+    "updateUserSettings": async (newData: UserSettings) => { await file.set(newData) }
+  })
+  file.initialize()
+  return {
+    methods: methods,
+    cleanup() { file.cleanup() }
+  }
+}

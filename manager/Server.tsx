@@ -2,6 +2,7 @@ import { ServerEventPublisher } from "./lib/ws2-core"
 import { appServer } from "./lib/server"
 import { onProcessExit } from "./lib/server-cleanup"
 import { PackageJson } from "./features/package-json"
+import { UserSettings } from "./features/user-settings"
 
 
 
@@ -10,13 +11,15 @@ export const startManager = async () => {
     (payload) => { console.log("Publishing global event:", [ payload.evName, payload.data ]) }
   )
   const packageJson = PackageJson(publisher.publish)
+  const userSettings = UserSettings()
   // const pinger = Pinger(publisher.publish)
   const server = await appServer({
     publisher,
     methods: {
       "getTime": () => new Date().toISOString(),
       "getRandomNumber": (prefix: string, suffix: number) => prefix + Math.random() + suffix,
-      ...packageJson.methods
+      ...packageJson.methods,
+      ...userSettings.methods
     },
     events: {
       ...packageJson.events,
@@ -27,6 +30,7 @@ export const startManager = async () => {
   onProcessExit(() => {
     server.server.stop()
     packageJson.cleanup()
+    userSettings.cleanup()
     // pinger.cleanup()
   })
   return server

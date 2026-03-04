@@ -1,9 +1,10 @@
 import * as fs from 'fs'
 import { Listener } from './util-listener'
 import type { MaybePromise } from 'bun'
+import { getErrorCode, getErrorMessage } from './util-get-error-message'
 
 
-export function fileController<O>(
+export function FileController<O>(
   path: `./${ string }`,
   reader: (file: Bun.BunFile) => MaybePromise<O>,
   writer: (file: Bun.BunFile, data: O) => MaybePromise<any>,
@@ -48,11 +49,23 @@ export function fileController<O>(
 
 
 
-export function WatchJsonFile<JSON>(path: `./${ string }`) {
-  return fileController<JSON>(path,
+export function WatchJsonFile<JSON>(
+  path: `./${ string }`,
+  options?: {
+    onNotExist?: (file: Bun.BunFile) => MaybePromise<JSON>
+  }
+) {
+  return FileController<JSON>(path,
     async (file) => {
-      const text = await file.text()
-      return JSON.parse(text)
+      try {
+        const text = await file.text()
+        return JSON.parse(text)
+      } catch (error) {
+        if (getErrorCode(error) === "ENOENT") {
+          return await options?.onNotExist?.(file)
+        }
+        throw error
+      }
     },
     async (file, data) => {
       return file.write(JSON.stringify(data, null, 2))
