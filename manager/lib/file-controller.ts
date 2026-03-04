@@ -19,8 +19,9 @@ export function fileController<O>(
     if (store.content === undefined) throw new Error("File content not loaded yet. Please call initialize() first.")
     return store.content
   }
-  async function set(newValue: O) { return await writer(file, newValue) }
-
+  async function set(newValue: O) {
+    return await writer(file, newValue)
+  }
   async function initialize() {
     store.content = await reader(file)
     store.watcher = fs.watch(path, async (evType) => {
@@ -44,6 +45,8 @@ export function fileController<O>(
     cleanup,
   }
 }
+
+
 
 export function WatchJsonFile<JSON>(path: `./${ string }`) {
   return fileController<JSON>(path,

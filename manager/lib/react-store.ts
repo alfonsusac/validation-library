@@ -17,19 +17,11 @@ export function createCache<T>(
   function subscribe(listener: (data: T) => void) {
     return listeners.subscribe(listener)
   }
-  // function useStore() {
-  //   const data = useSyncExternalStore(subscribe, get, get)
-  //   return [ data, update ] as [
-  //     data: typeof data,
-  //     update: typeof update
-  //   ]
-  // }
   function cleanup() {
     cleanupFn?.(store.data)
     listeners.clear()
   }
   return {
-    // useStore,
     update,
     get,
     subscribe,
@@ -37,23 +29,6 @@ export function createCache<T>(
   }
 
 }
-
-
-export const AppCacheStoreContext = createContext({} as Record<string, any>)
-
-// untested
-export function useCacheStore<T>(key: string, initialData: T) {
-  const globalstore = use(AppCacheStoreContext)
-  if (!globalstore[ key ]) globalstore[ key ] = createCache<T>(() => initialData)
-  const store = globalstore[ key ] as ReturnType<typeof createCache<T>>
-  const data = useSyncExternalStore(store.subscribe, store.get, store.get)
-  return {
-    data,
-    update: store.update
-  }
-}
-
-
 
 
 

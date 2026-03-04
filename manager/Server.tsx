@@ -1,8 +1,7 @@
 import { ServerEventPublisher } from "./lib/ws2-core"
-import { PackageJson } from "./features/package-json-server"
 import { appServer } from "./lib/server"
 import { onProcessExit } from "./lib/server-cleanup"
-import { Pinger } from "./features/pinger"
+import { PackageJson } from "./features/package-json"
 
 
 

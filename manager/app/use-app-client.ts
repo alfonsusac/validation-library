@@ -1,6 +1,6 @@
 import { createContext, use, useEffect, useMemo } from "react"
 import { createAppClient, type AppClient } from "../lib/server-client"
-import type { ManagerServer, ManagerServerEvents, ManagerServerMethods } from "../Server"
+import type { ManagerServerEvents, ManagerServerMethods } from "../Server"
 import { getErrorMessage } from "../lib/util-get-error-message"
 
 

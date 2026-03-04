@@ -9,7 +9,6 @@ export async function jfetch<T>(url: string, opts?: RequestInit) {
     const jsonRes = await (async () => {
       try {
         const json = await res.json() as T
-        // console.log("Json: ", json)
         return { status: "ok" as const, jsondata: json }
       } catch (error) {
         return { status: "parse error" as const, message: "Invalid JSON response" }

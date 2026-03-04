@@ -1,6 +1,4 @@
-import { createContext, use, useEffect, useMemo } from "react"
-import { createAppSocket } from "../app/app-ws"
-import { EventListener, Listener } from "./util-listener"
+import { EventListener } from "./util-listener"
 import type { ServerEventPayload } from "./ws2-core"
 import { getErrorMessage } from "./util-get-error-message"
 import { createStore, type Store } from "./react-store"
@@ -58,7 +56,6 @@ export function createAppClient<
     return storeMap[ key ]
   }
   function createOrRetrieveStore<T>(key: string, initialData: any) {
-    // console.log("Creating Store.", Object.keys(storeMap).length, "existing stores.")
     if (getStore(key)) {
       console.warn(`store with key ${ key } already exists. Returning existing store.`)
       return getStore(key) as Store<T>
