@@ -1,49 +1,55 @@
 import * as fs from 'fs'
-import { EventListener } from './util-listener'
+import { Listener } from './util-listener'
+import type { MaybePromise } from 'bun'
 
-export async function textFileController(
+
+export function fileController<O>(
   path: `./${ string }`,
-  deps: {
-    publish: (data: string) => void,
-  }
+  reader: (file: Bun.BunFile) => MaybePromise<O>,
+  writer: (file: Bun.BunFile, data: O) => MaybePromise<any>,
 ) {
   const file = Bun.file(path)
-  const emitter = new EventListener<{ update: [ string ], }>()
-  const watcher = watch()
-  let content: string
-  readFile().then((res) => content = res)
+  const store = {
+    content: undefined as undefined | O,
+    watcher: undefined as undefined | fs.FSWatcher,
+    listener: new Listener<O>(),
+  }
 
-  function readFile() {
-    return file.text()
-  }
-  function writeFile(content: string) {
-    return file.write(content)
-  }
-  function watch() {
-    return fs.watch(path, async (evType) => {
+  function get() { return store.content }
+  async function set(newValue: O) { return await writer(file, newValue) }
+
+  async function initialize() {
+    store.content = await reader(file)
+    store.watcher = fs.watch(path, async (evType) => {
       if (evType !== "change") return
-      const newContent = await readFile()
-      content = newContent
-      deps.publish(newContent)
-      emitter.emit('update', newContent)
+      store.content = await reader(file)
+      store.listener.emit(store.content)
     })
   }
-  function update(newContent: string) {
-    if (newContent !== content) {
-      file.write(newContent)
-      content = newContent
-      emitter.emit('update', newContent)
-    }
+  function subscribe(callback: (data: O) => void) {
+    return store.listener.subscribe(callback)
   }
-  function dispose() {
-    emitter.clear()
-    watcher.close()
+  function cleanup() {
+    store.watcher?.close()
+    store.listener.clear()
   }
-
   return {
-    update,
-    dispose,
+    get,
+    set,
+    initialize,
+    subscribe,
+    cleanup,
   }
+}
 
-
+export function WatchJsonFile<JSON>(path: `./${ string }`) {
+  return fileController<JSON>(path,
+    async (file) => {
+      const text = await file.text()
+      return JSON.parse(text)
+    },
+    async (file, data) => {
+      return file.write(JSON.stringify(data, null, 2))
+    }
+  )
 }

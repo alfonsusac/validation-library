@@ -1,69 +1,30 @@
 import type { MaybePromise } from "bun"
 
-export function WsHandler(opts: {
-  handleMessage?:
-  (ws: Bun.ServerWebSocket, message: string | Buffer<ArrayBuffer>) => MaybePromise<void>
-  handleString?:
-  (ws: Bun.ServerWebSocket, message: string) => MaybePromise<void>
-  handleBuffer?:
-  (ws: Bun.ServerWebSocket, message: Buffer<ArrayBuffer>) => MaybePromise<void>
-  handleJson?:
-  (ws: Bun.ServerWebSocket, message: any) => MaybePromise<void>
-}) {
-  const log = console.log.bind(console, "WsHandler:")
-
-  return {
-    handleMessage: async (ws: Bun.ServerWebSocket, message: string | Buffer<ArrayBuffer>) => {
-      try {
-        await opts.handleMessage?.(ws, message)
-        if (typeof message !== "string") {
-          log("binary received")
-          await opts.handleBuffer?.(ws, message)
-        }
-        else {
-          await opts.handleString?.(ws, message)
-          try {
-            log("json received")
-            const parsed = JSON.parse(message)
-            await opts.handleJson?.(ws, parsed)
-          } catch (error) {
-            log("string received")
-            // not a json
-          }
-        }
-      } catch (error) {
-        log("error handling message:", error)
-        // TODO: test error handling - make sure one bad message doesn't crash 
-        // the server or disconnect the client
-      }
-    }
-  }
-}
-
-
-
-
-
 // ----
 
-export function publisher<P>(
-  server: Bun.Server<undefined>,
+export function ServerPublisher<P extends any[]>(
   channel: string,
-  encoder: ((data: P) => string | Buffer<ArrayBuffer>)
+  encoder: ((...data: P) => string | Buffer<ArrayBuffer>)
 ) {
+  let _server: Bun.Server<undefined> | undefined = undefined
   function subscribe(ws: Bun.ServerWebSocket) {
     ws.subscribe(channel)
   }
   function unsubscribe(ws: Bun.ServerWebSocket) {
     ws.unsubscribe(channel)
   }
-  function publish(message: P) {
-    server.publish(channel, encoder(message))
+  function publish(...message: P) {
+    if (!_server) throw new Error("ServerPublisher is not initialized")
+    _server.publish(channel, encoder(...message))
   }
-  return { subscribe, unsubscribe, publish }
+  function initialize(server: Bun.Server<undefined>) {
+    if (_server) throw new Error("ServerPublisher is already initialized")
+    _server = server
+  }
+  return { subscribe, unsubscribe, publish, initialize }
 }
 
-export type publisher = ReturnType<typeof publisher>
+export type ServerPublisher = ReturnType<typeof ServerPublisher>
 
 
 
@@ -71,104 +32,68 @@ export type publisher = ReturnType<typeof publisher>
 
 // ----
 
+export type ServerEventPayload = { event: string, data: any }
+export type EventPublisherSchema = { [ E in string ]: (...args: any) => void }
+export type ServerEventPublisher = ReturnType<typeof ServerEventPublisher>
+export function ServerEventPublisher(
+  channel: string,
+  onPublish: (payload: { evName: string, data: any }) => any
+) {
+  return ServerPublisher(
+    channel,
+    (evName: string, data: any) => {
+      onPublish({ evName, data })
+      return JSON.stringify({ event: evName, data } satisfies ServerEventPayload)
+    }
+  )
+}
+
 export function EventPublisher<
-  P extends { [ E in string ]: (evName: E, ...args: any) => void }
->(opts: {
-  publishings: P,
-}) {
-  type HandlerData<K extends keyof P> = P[ K ] extends (first: any, ...args: infer A) => any ? A : never
+  P extends EventPublisherSchema
+>(publishings: P, opts?: {}) {
+  type HandlerData<K extends keyof P> = P[ K ] extends (...args: infer A) => any ? A : never
   return {
     publish: <K extends keyof P & string>(evName: K, ...data: HandlerData<K>) => {
-      if (evName in opts.publishings === false)
+      if (evName in publishings === false)
         return console.error("unknown event:", evName)
-      opts.publishings[ evName ](evName, ...data)
+      publishings[ evName ](evName, ...data)
     },
+    publishings: publishings,
     _$emitMap: {} as GetEmitMap<P>
   }
 }
 
-type GetEmitMap<P extends { [ E in string ]: (evName: E, ...args: any) => void }> = { [ K in keyof P ]: P[ K ] extends (first: any, ...args: infer A) => any ? (...data: A) => void : never }
+// -
 
-
-export function EventRouter<
-  H extends Record<string, EventHandler>,
->(opts: {
-  handlers: H,
-  handle: (ws: Bun.ServerWebSocket, name: string, data: any) => MaybePromise<void>
-}) {
-  const wsMap = new WeakMap<Bun.ServerWebSocket, EventWSClient>()
+export type EventMap = { [ E in string ]: any[] }
+export type EventPublisherFn = (evName: string, ...data: any) => void
+export function EventEmitter<
+  P extends { [ E in string ]: [any] }
+>(publisherFn: EventPublisherFn) {
   return {
-    handleJson: async (ws: Bun.ServerWebSocket, data: unknown) => {
-      const client = wsMap.get(ws)
-      if (!client) return console.error("received message from unknown client")
-      if (isValidEventIncomingData(data) === false) return "unknown schema"
-      if (data.type in opts.handlers === false)
-        return await opts.handle(ws, data.type, data.data)
-      await opts.handlers[ data.type ]?.(client, data.data)
+    publish: <N extends keyof P & string>(name: N, ...data: P[ N ]) => {
+      publisherFn(name, ...data)
     },
-    onOpen: (ws: Bun.ServerWebSocket) => wsMap.set(ws, {
-      instance: ws,
-      sendEvent: (evName: string, data: any) => ws.send(JSON.stringify({ type: evName, data }))
-    }),
-    onClose: (ws: Bun.ServerWebSocket) => wsMap.delete(ws),
-    handlers: opts.handlers,
-    _$handlerMap: {} as GetHandlerMap<H>
+    events: {} as P
   }
 }
 
-type GetHandlerMap<H extends Record<string, EventHandler>> = { [ K in keyof H ]: H[ K ] extends (first: any, ...rest: infer R) => any ? (...args: R) => void : never }
-type EventHandler = (ws: EventWSClient, data: any) => MaybePromise<void>
-type EventWSClient = {
-  instance: Bun.ServerWebSocket,
-  sendEvent: (evName: string, data: any) => void
-}
-type EventIncomingData = { type: string, data: any }
-function isValidEventIncomingData(data: unknown): data is EventIncomingData {
-  return typeof data === "object" && data !== null && "type" in data && typeof data.type === "string"
-}
 
 
-
-// ---
-
-export type RPCPayloadIn = { name: string, args: any }
-export type RPCPayloadOut = { result: any }
-
-export function RPCServer<
-  M extends Record<string, (...args: any) => MaybePromise<any>>
->(opts: {
-  methods: M,
-}) {
-
-  const handleEvent: EventHandler =
-    async (client, data) => {
-      if (typeof data !== "object" || data === null) return console.error("invalid rpc call: data should be an object")
-      if (typeof data.name !== "string") return console.error("invalid rpc call: missing rpc name")
-      if (typeof data.id !== "string") return console.error("invalid rpc call: missing rpc id")
-      const name = data.name
-      const args = data.args
-      if (name in opts.methods === false)
-        return console.error("unknown rpc method:", name)
-      const result = await opts.methods[ name ](args)
-      client.sendEvent("rpc_response", { id: data.id, result })
-    }
-
-  return {
-    eventHandlers: { "rpc": handleEvent },
-    _$methodMap: {} as GetMethodMap<M>
-  }
-}
-
-type GetMethodMap<M extends Record<string, (...args: any) => MaybePromise<any>>> = { [ K in keyof M ]: (...args: Parameters<M[ K ]>) => Awaited<ReturnType<M[ K ]>> }
-
-
+export type Publishings = Record<string, (evName: string, ...args: any) => void>
+type GetEmitMap<P extends EventPublisherSchema> = { [ K in keyof P ]: P[ K ] extends (...args: infer A) => any ? (...data: A) => void : never }
 
 
 
 // -----
 
-export function RPCFetch<
-  F extends Record<string, (...args: any) => MaybePromise<any>>  
+export type RPCPayloadIn = { name: string, args: any }
+export type RPCPayloadOut = { result: any }
+
+export function RPCMethods<F extends RPCMethods>(methods: F): F { return methods }
+
+export function RPCFetchHandlers<
+  F extends RPCMethods
 >(opts: {
   methods: F
 }) {
@@ -191,9 +116,10 @@ export function RPCFetch<
 
   return {
     routeMap,
-    _$methodMap: {} as F
+    methods: opts.methods
   }
 }
+export type RPCMethods = Record<string, (...args: any) => MaybePromise<any>>
 
 
 
@@ -201,60 +127,8 @@ export function RPCFetch<
 
 // -----
 
-export function appServer<
-  H extends Record<string, EventHandler>,
-  P extends { [ E in string ]: (evName: E, ...args: any) => void },
-  F extends Record<string, (...args: any) => MaybePromise<any>>  
->(config: {
-  server: Bun.Server<undefined>,
-  ws?: {
-    onMessage?:
-    (ws: Bun.ServerWebSocket, message: string | Buffer<ArrayBuffer>) => MaybePromise<void>
-    onString?:
-    (ws: Bun.ServerWebSocket, message: string) => MaybePromise<void>
-    onBuffer?:
-    (ws: Bun.ServerWebSocket, message: Buffer<ArrayBuffer>) => MaybePromise<void>
-    onJson?:
-    (ws: Bun.ServerWebSocket, message: any) => MaybePromise<void>
-  },
-  events?: {
-    handlers?: H,
-    handle?: (ws: Bun.ServerWebSocket, name: string, data: any) => MaybePromise<void>,
-    publishings?: P
-  },
-  rpc?: {
-    methods: F,
-  },
-}) {
-  const rpc = RPCFetch({ methods: config.rpc?.methods ?? {} })
-
-  const eventRouter = EventRouter({
-    handlers: {
-      ...config.events?.handlers,
-    },
-    handle: config.events?.handle ?? (() => { })
-  })
-
-  const handler = WsHandler({
-    handleBuffer: config.ws?.onBuffer,
-    handleString: config.ws?.onString,
-    handleMessage: config.ws?.onMessage,
-    handleJson: async (ws, message) => {
-      await config.ws?.onJson?.(ws, message)
-      await eventRouter.handleJson(ws, message)
-    },
-  })
-
-  const publish = EventPublisher({
-    publishings: config.events?.publishings ?? {}
-  }).publish
-
-  return {
-    handler,
-    routeHandler: rpc.routeMap,
-    publish,
-    _$rpcMap: {} as F,
-    _$eventEmitMap: {} as GetEmitMap<P>,
-    _$eventHandlerMap: {} as GetHandlerMap<H>
-  }
+export type AppServer = {
+  rpcMethods: Record<string, (...args: any) => MaybePromise<any>>,
+  publishings: EventPublisherSchema,
+  onServe: (server: Bun.Server<undefined>) => MaybePromise<void>,
 }

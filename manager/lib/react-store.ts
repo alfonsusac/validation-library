@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react"
+import { createContext, use, useSyncExternalStore } from "react"
 import { Listener } from "./util-listener"
 
 export function createCache<T>(
@@ -37,3 +37,19 @@ export function createCache<T>(
   }
 
 }
+
+
+export const AppCacheStoreContext = createContext({} as Record<string, any>)
+
+// untested
+export function useCacheStore<T>(key: string, initialData: T) {
+  const globalstore = use(AppCacheStoreContext)
+  if (!globalstore[ key ]) globalstore[ key ] = createCache<T>(() => initialData)
+  const store = globalstore[ key ] as ReturnType<typeof createCache<T>>
+  const data = useSyncExternalStore(store.subscribe, store.get, store.get)
+  return {
+    data,
+    update: store.update
+  }
+}
+
