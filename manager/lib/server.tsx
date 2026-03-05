@@ -12,19 +12,20 @@ export async function appServer<
   publisher: ServerEventPublisher,
   methods?: M,
   events?: E,
+  logger?: (...args: any[]) => void,
 }) {
   // Prerequisites
   const rpc = RPCFetchHandlers({ methods: config.methods ?? {} })
   await renderRoot({ routeName: '/index.html', title: "Fullstack Bun App", })
 
   // Start the server
-  console.log("Starting server...")
+  config.logger?.("Starting server...")
   const server = Bun.serve({
     development: {
       console: true,
     },
     fetch(req) {
-      console.log(`Received request for ${ req.url } ${ req.method }`)
+      config.logger?.(`Received request for ${ req.url } ${ req.method }`)
       return new Response("Not Found", { status: 404 })
     },
     routes: {
@@ -34,10 +35,11 @@ export async function appServer<
     },
     websocket: {
       open(ws) {
-        console.log("Client connected. Count:", server.pendingWebSockets)
+        config.logger?.("Client connected. Count:", server.pendingWebSockets)
         config.publisher.subscribe(ws)
       },
       close(ws) {
+        config.logger?.("Client disconnected. Count:", server.pendingWebSockets)
         config.publisher.unsubscribe(ws)
       },
       message(ws, message) { },
@@ -47,10 +49,10 @@ export async function appServer<
   // Logging
   const routeCount = 2 + Object.keys(rpc.routeMap).length
   const methodCount = Object.keys(config.methods ?? {}).length
-  console.log(`Server running at [${ server.url }]`)
-  console.log(`Routes  (${ routeCount }) = /, /ws, ${ Object.keys(rpc.routeMap).join(", ") }`)
-  console.log(`Methods (${ methodCount }) = ${ Object.keys(config.methods ?? {}).map(m => `${ m }`).join(", ") }`)
-  console.log(``)
+  config.logger?.(`Server running at [${ server.url }]`)
+  config.logger?.(`Routes  (${ routeCount }) = /, /ws, ${ Object.keys(rpc.routeMap).join(", ") }`)
+  config.logger?.(`Methods (${ methodCount }) = ${ Object.keys(config.methods ?? {}).map(m => `${ m }`).join(", ") }`)
+  config.logger?.(``)
 
   return {
     server,

@@ -5,6 +5,7 @@ import type { MaybePromise } from "bun"
 import { checkNPMName } from "../app-fetches"
 import { usePackageJson } from "../../features/package-json-client"
 import { packageJsonParser } from "../../features/package-json-validations"
+import { useUserSettings } from "../../features/user-settings-client"
 
 export function ProjectSettings() {
   return <div className="flex flex-col gap-6 py-4">
@@ -193,8 +194,14 @@ const BasicField = <T,>({
 
 
 function ProjectNameInput() {
-  const { packageJson, updatePackageJson } = usePackageJson(true)
-  const [ isCheckAvailEnabled, setIsCheckAvailEnabled ] = useState(false)
+  const { packageJson, updatePackageJson } = usePackageJson()
+  const { userSettings, updateUserSettings } = useUserSettings()
+  const isCheckAvailEnabled = userSettings.checkProjectNameOnNPM
+
+  // const [ isCheckAvailEnabled, setIsCheckAvailEnabled ] = useState(false)
+  // useEffect(() => {
+  //   call
+  // }, [ isCheckAvailEnabled  ])
   const field = useField(packageJson.name, {
     validate: (value) => packageJsonParser.name.validate(value, () => false),
     warn: packageJsonParser.name.warn,
@@ -243,7 +250,11 @@ function ProjectNameInput() {
         The name of the package. If If you don't plan to publish your package, the name and version fields are optional.
 
         <div className="flex flex-row gap-2 items-center cursor-pointer group"
-          onClick={() => setIsCheckAvailEnabled(v => !v)}
+          onClick={() => {
+            // setIsCheckAvailEnabled(v => !v)
+            updateUserSettings(prev => ({ ...prev, checkProjectNameOnNPM: !prev.checkProjectNameOnNPM }))
+            // updateUserSettings({ ...userSettings, checkProjectNameOnNPM: !isCheckAvailEnabled })
+          }}
         >
           <div className={cn("rounded-full bg-bg-2 p-1 w-8 transition-[background]",
             isCheckAvailEnabled ? "bg-slate-600" : ""
@@ -273,7 +284,7 @@ function ProjectNameInput() {
 }
 
 function ProjectVersionInput() {
-  const { packageJson, updatePackageJson } = usePackageJson(true)
+  const { packageJson, updatePackageJson } = usePackageJson()
   const field = useField(packageJson.version, {
     validate: (value) => packageJsonParser.version.validate(value),
   })
@@ -292,7 +303,7 @@ function ProjectVersionInput() {
 }
 
 function ProjectDescriptionInput() {
-  const { packageJson, updatePackageJson } = usePackageJson(true)
+  const { packageJson, updatePackageJson } = usePackageJson()
   const field = useField(packageJson.description, {
     validate: (value) => packageJsonParser.description.validate(value),
     clearable: true,
@@ -406,7 +417,7 @@ const ListInput = (props: Omit<ComponentProps<"input">, 'value' | 'onChange'> & 
 
 
 function ProjectKeywordsInput() {
-  const { packageJson, updatePackageJson } = usePackageJson(true)
+  const { packageJson, updatePackageJson } = usePackageJson()
   const field = useField(packageJson.keywords, {
     validate: (value) => packageJsonParser.keywords.validate(value),
     clearable: true,
@@ -433,7 +444,7 @@ function ProjectKeywordsInput() {
 }
 
 function ProjectURLInput() {
-  const { packageJson, updatePackageJson } = usePackageJson(true)
+  const { packageJson, updatePackageJson } = usePackageJson()
   const field = useField(packageJson.homepage, {
     validate: (value) => packageJsonParser.homepage.validate(value),
     clearable: true,
@@ -455,7 +466,7 @@ function ProjectURLInput() {
 }
 
 function ProjectBugsInput() {
-  const { packageJson, updatePackageJson } = usePackageJson(true)
+  const { packageJson, updatePackageJson } = usePackageJson()
   const field = useField(packageJson.bugs, {
     validate: (value) => packageJsonParser.bugs.validate(value),
     clearable: true,

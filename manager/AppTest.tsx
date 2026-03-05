@@ -8,7 +8,7 @@ export function TestComponent() {
 
   useAsync(async () => {
     const res = await call('getTime')
-    console.log("Server time:", res)
+    // console.log("Server time:", res)
   })
 
   return <div className="flex flex-col">

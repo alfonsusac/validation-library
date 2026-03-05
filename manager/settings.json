@@ -1,3 +1,4 @@
 {
-  "checkProjectNameOnNPM": false
+  "checkProjectNameOnNPM": false,
+  "route": "/"
 }
