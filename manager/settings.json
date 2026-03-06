@@ -1,4 +1,4 @@
 {
   "checkProjectNameOnNPM": false,
-  "route": "/"
+  "route": "/package-json"
 }

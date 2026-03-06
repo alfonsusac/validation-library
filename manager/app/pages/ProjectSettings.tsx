@@ -6,6 +6,7 @@ import { checkNPMName } from "../app-fetches"
 import { usePackageJson } from "../../features/package-json-client"
 import { packageJsonParser } from "../../features/package-json-validations"
 import { useUserSettings } from "../../features/user-settings-client"
+import { call } from "../use-app-client"
 
 export function ProjectSettings() {
   return <div className="flex flex-col gap-6 py-4">
@@ -562,10 +563,10 @@ function ProjectLicenseInput() {
 
   const [ delayedVal, loading, reset ] = useAsync(async (signal) => {
     if (val === "") return "ok" // no license means "All rights reserved", which is valid
-    // await new Promise(resolve => setTimeout(resolve, Math.random() * 2500))
     if (signal.aborted) throw 0
-    // const res = await fetchServer("GET:/sdpx-licenses")
-    // return res.map((license) => license.id).includes(val) ? "ok" : "license not found in SPDX list"
+    const res = await call("getValidLicenses")
+    if (res.status !== "ok") throw new Error(res.status)
+    return res.licenses.map((license) => license.id).includes(val) ? "ok" : "license not found in SPDX list"
   }, [ val ])
 
   return <div>
