@@ -1,10 +1,22 @@
-import { cn } from "lazy-cn"
+import { useEffect, useSyncExternalStore } from "react"
 import { ProjectSettings } from "./app/pages/ProjectSettings"
 import { AppClientProvider, navigate, RoutePage } from "./app/use-app-client"
 import { usePackageJson } from "./features/package-json-client"
 import { useUserSettings } from "./features/user-settings-client"
 
 export function AppRoot() {
+
+  useEffect(() => {
+    console.log("> AppRoot")
+  }, [])
+
+  const data = useSyncExternalStore((listener) => {
+    console.log("Mount")
+    return () => console.log("Unmount")
+  }, () => {
+    return "23"
+  })
+
   return (
     <div className="bg-bg text-fg min-w-screen min-h-screen">
       <AppClientProvider url={"ws://localhost:3000/ws"}>
@@ -19,7 +31,9 @@ function App() {
   const { packageJson } = usePackageJson()
   const { userSettings } = useUserSettings()
 
-
+  useEffect(() => {
+    console.log("> App")
+  }, [])
 
   return (
     <div className="p-4 relative h-screen w-screen max-w-xl overflow-x-hidden mx-auto">
@@ -55,7 +69,6 @@ function App() {
           {(packageJson && userSettings) ? <ProjectSettings /> : null}
         </div>
       </RoutePage>
-
 
       <footer className="pt-20">
       </footer>

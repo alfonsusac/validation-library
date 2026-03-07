@@ -9,6 +9,11 @@ import { useUserSettings } from "../../features/user-settings-client"
 import { call } from "../use-app-client"
 
 export function ProjectSettings() {
+
+  useEffect(() => {
+    console.log("> ProjectSettings")
+  }, [])
+
   return <div className="flex flex-col gap-6 py-4">
     <ProjectNameInput />
     <ProjectVersionInput />
@@ -51,10 +56,11 @@ const useField = <T extends any>(initialData: T, opts:
       clearable?: undefined,
       defaultData?: undefined
     }
-  )
+  ),
+  deps: any[] = []
 ) => {
   const [ value, setValue ] = useState(initialData)
-  useEffect(() => setValue(initialData), [ JSON.stringify(initialData) ])
+  useEffect(() => setValue(initialData), [ JSON.stringify(initialData), ...deps ])
 
   // isChanged logic
   const isChanged = opts.equalityCheck?.(value, initialData) ??
@@ -129,7 +135,6 @@ const BasicField = <T,>({
 
   const clearButton = <button onClick={onClear} className="button ghost text-xs py-0 text-fg-4 hover:text-fg-3">
     Clear
-    {/* Delete */}
   </button>
 
   const onInputEnter = (e: KeyboardEvent) => {
@@ -139,7 +144,6 @@ const BasicField = <T,>({
   const inputProps = {
     value, onChange, ref: inputRef, placeholder, onKeyDown: onInputEnter
   }
-
 
   return <>
     <div className="flex">
@@ -559,33 +563,67 @@ function ProjectBugsInput() {
 // - [ ] allow unlicensed
 
 function ProjectLicenseInput() {
-  const [ val, setVal ] = useState("")
+  const { packageJson, updatePackageJson } = usePackageJson()
 
-  const [ delayedVal, loading, reset ] = useAsync(async (signal) => {
-    if (val === "") return "ok" // no license means "All rights reserved", which is valid
-    if (signal.aborted) throw 0
+  const [ licenses, loading ] = useAsync(async (signal) => {
     const res = await call("getValidLicenses")
     if (res.status !== "ok") throw new Error(res.status)
-    return res.licenses.map((license) => license.id).includes(val) ? "ok" : "license not found in SPDX list"
-  }, [ val ])
+    return res.licenses
+  }, [])
+
+  const field = useField(packageJson.license, {
+    validate: (value) => packageJsonParser.license.validate(value, licenses.status === "ok" ? licenses.result : undefined),
+    defaultData: () => "",
+    clearable: true,
+  }, [ licenses.status ])
 
   return <div>
-    <Label>License</Label>
-    <InputBlock>
-      <Input
-        value={val} onChange={(e) => setVal(e.currentTarget.value)}
-        placeholder="SPDX license identifier, e.g. MIT or Apache-2.0 OR MIT" />
-      <InputBlockFooter>
-        <InputBlockMessage>
+    <BasicField
+      {...field}
+      label="License"
+      onSave={(licensesText) => {
+        const newPackageJson = { ...packageJson }
+        newPackageJson.license = licensesText
+        updatePackageJson(newPackageJson)
+      }}
+      renderInput={() => {
+        return <>
+          <Input
+            value={field.value} onChange={(e) => field.setValue(e.currentTarget.value)}
+            placeholder="SPDX license identifier, e.g. MIT or Apache-2.0 OR MIT"
+          />
+
+          <div className="h-40 px-2 overflow-y-auto flex flex-col">
+            {licenses.status === "loading" ? <LoadingMessage>Loading valid licenses...</LoadingMessage> :
+              licenses.status === "error" ? <ErrorMessage error={licenses.error} /> :
+                licenses.status === "ok" ? licenses.result
+                  .sort((a, b) => Number(b.osiApproved) - Number(a.osiApproved) || a.id.localeCompare(b.id))
+                  .filter(l => field.value === undefined ? true : l.id.toLowerCase().includes(field.value.toLowerCase()) || l.name.toLowerCase().includes(field.value.toLowerCase()))
+                  .map((licenses) => {
+                    return <button className="py-1 hover:bg-bg-3/50 -mx-2 px-2 rounded-sm text-start shrink-0"
+                      onClick={() => field.setValue(licenses.id)}
+                    >
+                      <div className="font-mono text-sm">{licenses.id}</div>
+                      <div className="text-xs text-fg-3">{licenses.name}, {licenses.osiApproved ? "OSI Approved" : ""}</div>
+                    </button>
+                  }) : null
+            }
+          </div>
+
+
+          <InputBlockFooter>
+            {/* <InputBlockMessage>
           {delayedVal.status === "ok" ? delayedVal.result :
             delayedVal.status === "error" ? `Error: ${ delayedVal.error }` :
               delayedVal.status === "loading" ? "Checking..." :
                 "Type a license to see validation result here."
           }
-        </InputBlockMessage>
+        </InputBlockMessage> */}
 
-      </InputBlockFooter>
-    </InputBlock>
+          </InputBlockFooter>
+        </>
+      }}
+    />
   </div>
 
 

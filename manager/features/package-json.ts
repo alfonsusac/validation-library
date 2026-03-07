@@ -14,6 +14,7 @@ export type PackageJson = {
   } | string,
   dependencies?: Record<string, string>,
   devDependencies?: Record<string, string>,
+  license?: string,
 }
 
 

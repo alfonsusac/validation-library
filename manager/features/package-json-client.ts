@@ -3,11 +3,9 @@ import type { PackageJson } from "./package-json"
 import { call, useAppClient, type ManagerAppClient } from "../app/use-app-client"
 
 
-const packageJsonStoreKey = "packageJSON"
-
 export function usePackageJson() {
   const client = useAppClient(true)
-  const store = client.createOrRetrieveStore<PackageJson>(packageJsonStoreKey, async () => {
+  const store = client.createOrRetrieveStore<PackageJson>("packageJSON", async () => {
     client.subscribe("package-json-updated", (data) => store.update(data))
     return await call("getPackageJSON")
   })

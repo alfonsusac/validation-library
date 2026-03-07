@@ -53,11 +53,6 @@ export function createStore<T>(
     cleanupFn?.(content)
     listeners.clear()
   }
-  return {
-    update,
-    get,
-    subscribe,
-    cleanup,
-  }
+  return { update, get, subscribe, cleanup, }
 }
 export type Store<T> = ReturnType<typeof createStore<T>>

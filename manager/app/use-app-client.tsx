@@ -70,41 +70,15 @@ export function RoutePage(props: {
 }) {
   const { userSettings } = useUserSettings()
 
-  console.log(userSettings) // correct
   const currentRouteRef = useRef<string>(null)
   const prevRouteRef = useRef<string>(null)
 
-  // if (!userSettings) return null
   prevRouteRef.current = currentRouteRef.current || ""
   currentRouteRef.current = userSettings?.route || ""
 
   const isCurrentPath = matchRoute(userSettings?.route || "", props.path)
 
-  const isGoingBack = prevRouteRef.current?.includes(currentRouteRef.current)
-  const isGoingForward = currentRouteRef.current.includes(prevRouteRef.current ?? "_")
-
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!isCurrentPath) return
-    ref.current?.scrollTo(0, 0)
-  }, [ isCurrentPath ])
-
-  // const [ displayed, setDisplayed ] = useState(isCurrentPath)
-  // useEffect(() => {
-  //   if (!isCurrentPath) {
-  //     ref.current?.addEventListener("transitionend", () => {
-  //       setDisplayed(false)
-  //     }, { once: true })
-  //   } else {
-  //     setDisplayed(true)
-  //   }
-  // }, [ isCurrentPath ])
-
-  // if (!displayed) return null
-
-
   return <div
-    ref={ref}
     className={cn(
       "transition-discrete transition-all absolute inset-0 overflow-x-hidden overflow-y-auto",
       isCurrentPath ? "" : "pointer-events-none",
@@ -113,7 +87,6 @@ export function RoutePage(props: {
       props.classNames?.all,
     )}
     data-current={isCurrentPath ? "" : undefined}
-    data-route-direction={isGoingForward ? "forward" : isGoingBack ? "backward" : undefined}
   >
     {props.children}
   </div>
@@ -122,3 +95,17 @@ export function RoutePage(props: {
 export async function navigate(path: string) {
   await call("updateUserSettings", { route: path })
 }
+
+
+
+// const isGoingBack = prevRouteRef.current?.includes(currentRouteRef.current)
+// const isGoingForward = currentRouteRef.current.includes(prevRouteRef.current ?? "_")
+
+// const ref = useRef<HTMLDivElement>(null)
+// useEffect(() => {
+//   if (!isCurrentPath) return
+//   ref.current?.scrollTo(0, 0)
+// }, [ isCurrentPath ])
+
+// ref={ref}
+// data-route-direction={isGoingForward ? "forward" : isGoingBack ? "backward" : undefined}

@@ -108,7 +108,7 @@ export const packageJsonParser = {
     // - [ ] support for custom license file (e.g. "SEE LICENSE IN LICENSE.txt")
     // - [ ] only allow max 2 licenses because SPDX format for multiple licenses is hard to parse and validate, and it's uncommon to have more than 2 licenses. If more than 2 licenses are needed, users can use a custom license file.
     // - [ ] allow unlicensed
-    validate: (value: unknown, spdxLicenseId: string[]) => {
+    validate: (value: unknown, validLicenses?: { id: string }[]) => {
       if (typeof value === "undefined")
         return
       if (typeof value !== "string")
@@ -118,13 +118,15 @@ export const packageJsonParser = {
         return
       if (value.startsWith("SEE LICENSE IN ")) {
         const licenseFile = value.slice("SEE LICENSE IN ".length)
-        // TODO: validate as file path
         if (licenseFile.length === 0)
           return "license file name cannot be empty"
         if (/\s/.test(licenseFile))
           return "license file name cannot contain whitespace"
         return
       }
+      if (!validLicenses) return
+      if (validLicenses && validLicenses.map(l => l.id).includes(value) === false)
+        return "license must be a valid SPDX license identifier"
     }
   }
 }

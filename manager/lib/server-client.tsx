@@ -45,10 +45,7 @@ export function createAppClient<
     ws.onmessage = null
     event.clear()
     wsevent.cleanup()
-    // wsevent.clear()
-    // console.log("appClient ) Cleaning Up", Object.keys(storeMap).length, `[${ id }]`)
-    Object.entries(storeMap).forEach(([ key, store ]) => { // test
-      // console.log("appClient ) Cleaning Up storeMap")
+    Object.entries(storeMap).forEach(([ key, store ]) => {
       store.store.cleanup()
       delete storeMap[ key ]
     })
@@ -60,18 +57,6 @@ export function createAppClient<
       cleanup()
     }
   }
-  // function onReadyStateChange(handler: (state: "ready" | "closed") => void) {
-  //   const cleanup = wsevent.subscribe(handler)
-  //   return () => cleanup()
-  // }
-  // function getReadyState() {
-  //   console.log("ws) readyState", ws.readyState)
-  //   if (ws.readyState === WebSocket.CONNECTING) return "closed"
-  //   if (ws.readyState === WebSocket.OPEN) return "ready"
-  //   if (ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) return "closed"
-  //   // should not happen, but just in case
-  //   return "closed"
-  // }
   function length<K extends keyof E>(eventName: K) {
     return event.length(eventName)
   }
