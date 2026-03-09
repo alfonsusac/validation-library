@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from "react"
-import { call, useAppClient } from "../app/use-app-client"
+import { call, useAppClient } from "../app/app-client"
 import type { UserSettings } from "./user-settings"
 
 export function useUserSettings() {
-  const client = useAppClient(true)
+  const client = useAppClient()
   const store = client.createOrRetrieveStore<UserSettings>("userSettings", async () => {
     client.subscribe("user-settings-updated", (data) => store.update(data))
     const res = await call("getUserSettings")

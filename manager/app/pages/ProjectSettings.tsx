@@ -6,7 +6,7 @@ import { checkNPMName } from "../app-fetches"
 import { usePackageJson } from "../../features/package-json-client"
 import { packageJsonParser } from "../../features/package-json-validations"
 import { useUserSettings } from "../../features/user-settings-client"
-import { call } from "../use-app-client"
+import { call } from "../app-client"
 
 export function ProjectSettings() {
 

@@ -10,18 +10,20 @@ import { useQuery } from "../lib/react-store"
 
 export type ManagerAppClient = AppClient<ManagerServerEvents>
 
-export function useAppClient<T extends boolean = false>(required?: T) {
-  const [client] = useQuery("app_client", (clean) => {
-    const client = createAppClient("ws://localhost:3000/ws")
-    clean(() => client.cleanup())
+export function useAppClient() {
+  const [ appClient ] = useQuery("appClient", (cleanup) => {
+    const client = createAppClient(`ws://localhost:3000/ws`)
+    cleanup(() => {
+      console.log("Cleaning up AppClient")
+      client.cleanup()
+    })
     return client
   })
-  return client
+  return appClient
 }
 
 //------------
 // RPC call helper
-
 
 export async function call<T extends keyof ManagerServerMethods>(name: T, ...args: Parameters<ManagerServerMethods[ T ]>) {
   try {

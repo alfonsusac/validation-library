@@ -10,18 +10,6 @@ import type { MaybePromise } from "bun"
 // - ws client automatically parses data onMessage
 // - useWS -> read from context, return subscribe to eventObject func, return ws client instance
 
-export function useAppClient() {
-  const [ appClient ] = useQuery("appClient", (cleanup) => {
-    const client = createAppClient("ws://localhost:3000/ws")
-    cleanup(() => {
-      console.log("Cleaning up AppClient")
-      client.cleanup()
-    })
-    return client
-  })
-}
-
-
 
 export function createAppClient<
   E extends Record<string, any>

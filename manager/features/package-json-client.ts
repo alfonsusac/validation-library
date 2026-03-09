@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react"
 import { PackageJson } from "./package-json"
-import { call, useAppClient, type ManagerAppClient } from "../app/use-app-client"
+import { call, useAppClient, type ManagerAppClient } from "../app/app-client"
 import { useQuery } from "../lib/react-store"
 
 
