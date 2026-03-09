@@ -1,39 +1,28 @@
-import { useEffect, useSyncExternalStore } from "react"
-import { ProjectSettings } from "./app/pages/ProjectSettings"
-import { AppClientProvider, navigate, RoutePage } from "./app/use-app-client"
+import { nanoid } from "nanoid"
+import { TestComponent } from "./AppTest"
+import { getHello, newQueryClient, QueryClientProvider, useQueryClientStore, useWS } from "./lib/react-store"
 import { usePackageJson } from "./features/package-json-client"
 import { useUserSettings } from "./features/user-settings-client"
+import { navigate, RoutePage } from "./app/use-app-client"
+import { ProjectSettings } from "./app/pages/ProjectSettings"
+
+const qc = newQueryClient()
+import.meta.hot.dispose(() => qc.cleanup())
 
 export function AppRoot() {
-
-  useEffect(() => {
-    console.log("> AppRoot")
-  }, [])
-
-  const data = useSyncExternalStore((listener) => {
-    console.log("Mount")
-    return () => console.log("Unmount")
-  }, () => {
-    return "23"
-  })
-
   return (
     <div className="bg-bg text-fg min-w-screen min-h-screen">
-      <AppClientProvider url={"ws://localhost:3000/ws"}>
+      <QueryClientProvider qc={qc}>
         <App />
-      </AppClientProvider>
+      </QueryClientProvider>
     </div>
   )
 }
 
 function App() {
 
-  const { packageJson } = usePackageJson()
+  const [ packageJson ] = usePackageJson(false)
   const { userSettings } = useUserSettings()
-
-  useEffect(() => {
-    console.log("> App")
-  }, [])
 
   return (
     <div className="p-4 relative h-screen w-screen max-w-xl overflow-x-hidden mx-auto">
@@ -46,12 +35,12 @@ function App() {
           </header>
 
           <div className="-mx-1 bg-bg-2/50 rounded-xl overflow-hidden">
-            <MenuItem 
+            <MenuItem
               title="package.json"
               description="Edit project settings."
               onClick={() => navigate("/package-json")}
             />
-            <MenuItem 
+            <MenuItem
               title="test"
               description="Edit project settings."
               onClick={() => navigate("/package-json")}

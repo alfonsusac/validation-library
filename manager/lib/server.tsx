@@ -39,7 +39,7 @@ export async function appServer<
         config.publisher.subscribe(ws)
       },
       close(ws) {
-        config.logger?.("Client disconnected. Count:", server.pendingWebSockets)
+        config.logger?.("Client disconnected. Count:", server.pendingWebSockets - 1)
         config.publisher.unsubscribe(ws)
       },
       message(ws, message) { },

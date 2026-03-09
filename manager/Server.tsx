@@ -4,6 +4,7 @@ import { onProcessExit } from "./lib/server-cleanup"
 import { PackageJson } from "./features/package-json"
 import { UserSettings } from "./features/user-settings"
 import { color } from "bun"
+import { Pinger } from "./features/pinger"
 
 export function log(...args: any[]) {
   console.log(`${ color("darkgreen", "ansi") }server\x1b[0m`, ...args)
@@ -11,11 +12,11 @@ export function log(...args: any[]) {
 
 export const startManager = async () => {
   const publisher = ServerEventPublisher("global",
-    (payload) => { log("Publishing global event:", [ payload.evName ]) }
+    // (payload) => { log("Publishing global event:", [ payload.evName ]) }
   )
   const packageJson = PackageJson(publisher.publish)
   const userSettings = UserSettings(publisher.publish)
-  // const pinger = Pinger(publisher.publish)
+  const pinger = Pinger(publisher.publish)
   const server = await appServer({
     publisher,
     methods: {
@@ -27,7 +28,7 @@ export const startManager = async () => {
     events: {
       ...packageJson.events,
       ...userSettings.events,
-      // ...pinger.events
+      ...pinger.events
     },
     logger: log
   })
@@ -36,7 +37,7 @@ export const startManager = async () => {
     server.server.stop()
     packageJson.cleanup()
     userSettings.cleanup()
-    // pinger.cleanup()
+    pinger.cleanup()
   })
 
   return server

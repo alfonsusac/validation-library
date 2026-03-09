@@ -5,7 +5,6 @@ import type { UserSettings } from "./user-settings"
 export function useUserSettings() {
   const client = useAppClient(true)
   const store = client.createOrRetrieveStore<UserSettings>("userSettings", async () => {
-    console.log("AA")
     client.subscribe("user-settings-updated", (data) => store.update(data))
     const res = await call("getUserSettings")
     return res

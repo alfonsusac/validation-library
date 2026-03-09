@@ -1,7 +1,7 @@
 import { EventListener, Listener } from "./util-listener"
 import type { ServerEventPayload } from "./ws2-core"
 import { getErrorMessage } from "./util-get-error-message"
-import { createStore, type Store } from "./react-store"
+import { newStore, useQuery, type Store } from "./react-store"
 import type { MaybePromise } from "bun"
 
 // Strategy:
@@ -9,6 +9,19 @@ import type { MaybePromise } from "bun"
 // - ws client has subscribe func that listens to serverEvent broadcast
 // - ws client automatically parses data onMessage
 // - useWS -> read from context, return subscribe to eventObject func, return ws client instance
+
+export function useAppClient() {
+  const [ appClient ] = useQuery("appClient", (cleanup) => {
+    const client = createAppClient("ws://localhost:3000/ws")
+    cleanup(() => {
+      console.log("Cleaning up AppClient")
+      client.cleanup()
+    })
+    return client
+  })
+}
+
+
 
 export function createAppClient<
   E extends Record<string, any>
@@ -19,7 +32,7 @@ export function createAppClient<
   console.log("Creating AppClient with wsurl:", wsurl, `[${ id }]`)
   const ws = new WebSocket(wsurl)
   const event = new EventListener<{ [ K in keyof E ]: [ data: E[ K ] ] }>()
-  const wsevent = createStore(() => ws.readyState)
+  const wsevent = newStore(() => ws.readyState)
 
   ws.onopen = () => {
     console.log("ws) connected")
@@ -74,7 +87,7 @@ export function createAppClient<
       console.warn(`store with key ${ key } already exists. Returning existing store.`)
       return getStore(key).store as Store<T>
     }
-    const newstore = createStore<T | undefined>(() => undefined)
+    const newstore = newStore<T | undefined>(() => undefined)
     storeMap[ key ] = {
       store: newstore,
     }

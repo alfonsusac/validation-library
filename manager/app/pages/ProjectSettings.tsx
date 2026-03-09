@@ -199,7 +199,7 @@ const BasicField = <T,>({
 
 
 function ProjectNameInput() {
-  const { packageJson, updatePackageJson } = usePackageJson()
+  const [ packageJson, updatePackageJson ] = usePackageJson()
   const { userSettings, updateUserSettings } = useUserSettings()
   const isCheckAvailEnabled = userSettings.checkProjectNameOnNPM
 
@@ -289,7 +289,7 @@ function ProjectNameInput() {
 }
 
 function ProjectVersionInput() {
-  const { packageJson, updatePackageJson } = usePackageJson()
+  const [ packageJson, updatePackageJson ] = usePackageJson()
   const field = useField(packageJson.version, {
     validate: (value) => packageJsonParser.version.validate(value),
   })
@@ -308,7 +308,7 @@ function ProjectVersionInput() {
 }
 
 function ProjectDescriptionInput() {
-  const { packageJson, updatePackageJson } = usePackageJson()
+  const [ packageJson, updatePackageJson ] = usePackageJson()
   const field = useField(packageJson.description, {
     validate: (value) => packageJsonParser.description.validate(value),
     clearable: true,
@@ -422,7 +422,7 @@ const ListInput = (props: Omit<ComponentProps<"input">, 'value' | 'onChange'> & 
 
 
 function ProjectKeywordsInput() {
-  const { packageJson, updatePackageJson } = usePackageJson()
+  const [ packageJson, updatePackageJson ] = usePackageJson()
   const field = useField(packageJson.keywords, {
     validate: (value) => packageJsonParser.keywords.validate(value),
     clearable: true,
@@ -449,7 +449,7 @@ function ProjectKeywordsInput() {
 }
 
 function ProjectURLInput() {
-  const { packageJson, updatePackageJson } = usePackageJson()
+  const [ packageJson, updatePackageJson ] = usePackageJson()
   const field = useField(packageJson.homepage, {
     validate: (value) => packageJsonParser.homepage.validate(value),
     clearable: true,
@@ -471,7 +471,7 @@ function ProjectURLInput() {
 }
 
 function ProjectBugsInput() {
-  const { packageJson, updatePackageJson } = usePackageJson()
+  const [ packageJson, updatePackageJson ] = usePackageJson()
   const field = useField(packageJson.bugs, {
     validate: (value) => packageJsonParser.bugs.validate(value),
     clearable: true,
@@ -563,7 +563,7 @@ function ProjectBugsInput() {
 // - [ ] allow unlicensed
 
 function ProjectLicenseInput() {
-  const { packageJson, updatePackageJson } = usePackageJson()
+  const [ packageJson, updatePackageJson ] = usePackageJson()
 
   const [ licenses, loading ] = useAsync(async (signal) => {
     const res = await call("getValidLicenses")

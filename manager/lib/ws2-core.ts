@@ -37,12 +37,12 @@ export type EventPublisherSchema = { [ E in string ]: (...args: any) => void }
 export type ServerEventPublisher = ReturnType<typeof ServerEventPublisher>
 export function ServerEventPublisher(
   channel: string,
-  onPublish: (payload: { evName: string, data: any }) => any
+  onPublish?: (payload: { evName: string, data: any }) => any
 ) {
   return ServerPublisher(
     channel,
     (evName: string, data: any) => {
-      onPublish({ evName, data })
+      onPublish?.({ evName, data })
       return JSON.stringify({ event: evName, data } satisfies ServerEventPayload)
     }
   )

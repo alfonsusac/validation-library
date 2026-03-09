@@ -5,40 +5,23 @@ import { getErrorMessage } from "../lib/util-get-error-message"
 import { useUserSettings } from "../features/user-settings-client"
 import { matchRoute } from "../lib/react-route"
 import { cn } from "lazy-cn"
+import { useQuery } from "../lib/react-store"
 
 
 export type ManagerAppClient = AppClient<ManagerServerEvents>
 
-export const AppClientContext = createContext(null as null | ManagerAppClient)
-
 export function useAppClient<T extends boolean = false>(required?: T) {
-  const client = use(AppClientContext)
-  if (!client && required) throw new Error("client not yet instantiated")
-  return client as T extends true ? NonNullable<typeof client> : typeof client
-}
-
-export function useAppClientStore(url: string) {
-  const [ client, setClient ] = useState<AppClient<ManagerServerEvents> | null>(null)
-
-  useEffect(() => {
-    const newClient = createAppClient(url)
-    setClient(newClient)
-    return () => {
-      newClient.cleanup()
-      setClient(null)
-    }
-  }, [ url ])
-
+  const [client] = useQuery("app_client", (clean) => {
+    const client = createAppClient("ws://localhost:3000/ws")
+    clean(() => client.cleanup())
+    return client
+  })
   return client
 }
 
-export function AppClientProvider(props: { children: React.ReactNode, url: string }) {
-  const client = useAppClientStore(props.url)
-  if (client === null) return null
-  return <AppClientContext value={client}>
-    {props.children}
-  </AppClientContext>
-}
+//------------
+// RPC call helper
+
 
 export async function call<T extends keyof ManagerServerMethods>(name: T, ...args: Parameters<ManagerServerMethods[ T ]>) {
   try {
@@ -57,8 +40,7 @@ export async function call<T extends keyof ManagerServerMethods>(name: T, ...arg
   }
 }
 
-// --------
-
+//------------
 // Routing
 
 export function RoutePage(props: {
@@ -95,17 +77,3 @@ export function RoutePage(props: {
 export async function navigate(path: string) {
   await call("updateUserSettings", { route: path })
 }
-
-
-
-// const isGoingBack = prevRouteRef.current?.includes(currentRouteRef.current)
-// const isGoingForward = currentRouteRef.current.includes(prevRouteRef.current ?? "_")
-
-// const ref = useRef<HTMLDivElement>(null)
-// useEffect(() => {
-//   if (!isCurrentPath) return
-//   ref.current?.scrollTo(0, 0)
-// }, [ isCurrentPath ])
-
-// ref={ref}
-// data-route-direction={isGoingForward ? "forward" : isGoingBack ? "backward" : undefined}
