@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type KeyboardEvent } from "react"
+import React, { useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type JSX, type KeyboardEvent, type SetStateAction } from "react"
 import { cn } from "lazy-cn"
 import { useAsync } from "../../lib/react-async"
 import type { MaybePromise } from "bun"
@@ -8,9 +8,18 @@ import { packageJsonParser } from "../../features/package-json-validations"
 import { useUserSettings } from "../../features/user-settings-client"
 import { call } from "../app-client"
 
+const H2 = (props: ComponentProps<"h2">) => <h2
+  {...props}
+  className={cn("text-lg text-fg sticky top-16 bg-bg z-10 pb-3 -mb-3", props.className)}
+  onClick={(e) => {
+    window.scrollTo({ top: e.currentTarget.offsetTop - 16, behavior: "smooth" })
+  }}
+/>
+
 export function ProjectSettings() {
 
   return <div className="flex flex-col gap-6 py-4">
+    <H2>General</H2>
     <ProjectNameInput />
     <ProjectVersionInput />
     <ProjectDescriptionInput />
@@ -18,16 +27,20 @@ export function ProjectSettings() {
     <ProjectURLInput />
     <ProjectBugsInput />
     <ProjectLicenseInput />
+    <H2>People</H2>
+    <ProjectAuthorInput />
+    <ProjectContributorsInput />
   </div>
 }
 
 const Label = (props: ComponentProps<"label">) => <label {...props} className={cn("text-xs text-fg-2 px-2 block", props.className)} />
 const InputBlock = (props: ComponentProps<"div">) => <div {...props} className={cn("bg-bg-2 p-1 flex flex-col rounded outline-fg-4 focus-within:outline-2 my-2", props.className)} />
-const InputBlockFooter = (props: ComponentProps<"div"> & { expanded: boolean }) => <div {...props} className={cn("flex items-baseline gap-2 px-1", props.expanded ? "py-1" : "", props.className)} />
+const InputBlockFooter = ({ expanded, ...props }: ComponentProps<"div"> & { expanded: boolean }) => <div {...props} className={cn("flex items-baseline gap-2 px-1", expanded ? "py-1" : "", props.className)} />
 const InputBlockMessage = (props: ComponentProps<"div">) => <div {...props} className={cn("text-xs text-fg-3 grow", props.className)} />
-const InputDescription = (props: ComponentProps<"div">) => <div {...props} className={cn("text-xs text-fg-3 px-2", props.className)} />
+const InputDescription = (props: ComponentProps<"div">) => <div {...props} className={cn("text-xs text-fg-4 hover:text-fg-2 px-2", props.className)} />
+const CloseButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost p-1 text-fg-4 hover:text-fg-3", props.className)}><LucideX /></button>
 
-const ErrorMessage = (props: { error: string | undefined }) => props.error === undefined ? null : <div className="text-error">{props.error}</div>
+const ErrorMessage = ({ error, ...props }: { error: any } & ComponentProps<"div">) => typeof error !== "string" ? null : <div {...props} className={cn("text-error", props.className)}>{error}</div>
 const WarnMessages = (props: { warns: string[] }) => <div className="text-warning/25">{props.warns.map((warn, i) => <div key={i}>{warn}</div>)}</div>
 const SuccessMessage = (props: { children?: React.ReactNode }) => <div className="text-success">{props.children}</div>
 const LoadingMessage = (props: { children?: React.ReactNode }) => <div className="text-fg-3/75 italic">{props.children}</div>
@@ -37,10 +50,11 @@ const InputWideButton = (props: ComponentProps<"button">) => <button {...props} 
 function LucidePlus(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7-7v14" /></svg>) }
 function LucideX(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 6L6 18M6 6l12 12" /></svg>) }
 function LucideCheck(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 6L9 17l-5-5" /></svg>) }
+function LucideUser(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></g></svg>) }
 
-const useField = <T extends any>(initialData: T, opts:
+const useField = <T, E>(initialData: T, opts:
   {
-    validate: (value: NoInfer<T>, abortSignal: { aborted: boolean }) => MaybePromise<string | undefined>,
+    validate: (value: NoInfer<T>, abortSignal: { aborted: boolean }) => MaybePromise<E>,
     warn?: (value: NoInfer<T>, abortSignal: { aborted: boolean }) => MaybePromise<string[]>,
     placeholder?: string,
     equalityCheck?: (a: NoInfer<T>, b: NoInfer<T>) => boolean,
@@ -70,9 +84,9 @@ const useField = <T extends any>(initialData: T, opts:
   const error = errorRes.status === "ok" ? errorRes.result : undefined
   const warns = warnsRes.status === "ok" ? warnsRes.result : []
 
-  const otherErrors: string[] = []
-  if (errorRes.status === 'error') otherErrors.push(error ?? "Unknown Error validating the field")
-  if (warnsRes.status === 'error') otherErrors.push(...warns)
+  // const otherErrors: string[] = []
+  // if (errorRes.status === 'error') otherErrors.push(error ?? "Unknown Error validating the field")
+  // if (warnsRes.status === 'error') otherErrors.push(...warns)
 
   const saveable = isChanged && error === undefined
   const resettable = isChanged
@@ -103,28 +117,33 @@ const useField = <T extends any>(initialData: T, opts:
   // Blur/Editing state
   const [ isFocus, setIsFocus ] = useState(false)
   const isEditing = isFocus || isChanged
+  // useEffect(() => {
+
+  // }, )
 
   return {
     value, setValue, isChanged,
     error, warns, isValidating, isCheckingWarns, resetValidate, resetWarns,
     saveable, onChange,
     resettable, reset, exists, clearable: opts.clearable, onClear,
-    onSetToNonUndefined, otherErrors,
+    onSetToNonUndefined,
+    // otherErrors,
     isFocus, setIsFocus, isEditing
   } as const
 }
 
 const ClearButton = (props: { clearable?: boolean, exists: boolean, onClear: () => void }) => props.clearable && props.exists ? <button onClick={props.onClear} className="button ghost text-xs py-0 text-fg-4 hover:text-fg-3">Clear</button> : null
-const SetValueButton = (props: { onSetToNonUndefined: () => void }) => <InputWideButton onClick={props.onSetToNonUndefined}><LucidePlus />Set value</InputWideButton>
 
-const BasicField = <T,>({
+const BasicField = <T, E>({
   value, onChange, error, warns, saveable, onSave, resettable, reset, label,
   description, renderInput, hideFooter, placeholder, clearable, onClear, exists,
-  isChanged, onSetToNonUndefined, isCheckingWarns, isValidating, otherErrors,
-  resetValidate, resetWarns, setValue, extraMessages, isFocus, setIsFocus
-}: ReturnType<typeof useField<T>> & {
+  isChanged, onSetToNonUndefined, isCheckingWarns, isValidating,
+  // otherErrors,
+  resetValidate, resetWarns, setValue, extraMessages, isFocus, setIsFocus, isEditing, unsetLabel
+}: ReturnType<typeof useField<T, E>> & {
   onSave: (value: T) => void,
   label: React.ReactNode,
+  unsetLabel?: React.ReactNode,
   description?: React.ReactNode,
   renderInput?: (props: {
     ref: React.Ref<HTMLInputElement>, // focusRef to focus on input element it when clicking on the input block
@@ -142,13 +161,28 @@ const BasicField = <T,>({
 
 
   const isInputBlockFooterExpanded =
-    !!error || !!warns.length || !!otherErrors.length || !!extraMessages
+    !!(error && typeof error === "string") || !!warns.length
+    // || !!otherErrors.length
+    || !!extraMessages
     || resettable || !!isValidating || !!isCheckingWarns
     || isChanged
 
   const inputProps = { value, onChange, ref: inputRef, placeholder, onKeyDown: onInputEnter }
 
-  return <>
+  const SetValueButton = (props: { onSetToNonUndefined: () => void }) => <InputWideButton onClick={props.onSetToNonUndefined}><LucidePlus />
+    {unsetLabel ?? "Set Value"}
+  </InputWideButton>
+
+  return <div
+    onFocus={() => {
+      setIsFocus(true)
+    }}
+    onBlur={(e) => {
+      if (!e.currentTarget.contains(e.relatedTarget))
+        setIsFocus(false)
+    }}
+    tabIndex={0}
+  >
     <div className="flex">
       <Label className="grow">{label}</Label>
       <ClearButton clearable={clearable} exists={exists} onClear={onClear} />
@@ -156,16 +190,7 @@ const BasicField = <T,>({
     <InputBlock
       onClick={() => inputRef.current?.focus()}
       className="group/block"
-      onFocus={() => {
-        console.log("focused")
-        setIsFocus(true)
-      }}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) 
-          setIsFocus(false)
-        console.log("blurred")
-      }}
-      tabIndex={0}
+
     >
       {showSetValueButton ?
         <SetValueButton onSetToNonUndefined={onSetToNonUndefined} />
@@ -176,7 +201,7 @@ const BasicField = <T,>({
           <InputBlockMessage>
             <ErrorMessage error={error} />
             <WarnMessages warns={warns} />
-            <Messages messages={otherErrors} />
+            {/* <Messages messages={otherErrors} /> */}
             {isValidating ? <LoadingMessage>Validating...</LoadingMessage> :
               isCheckingWarns && <LoadingMessage>Checking...</LoadingMessage>
             }
@@ -184,23 +209,32 @@ const BasicField = <T,>({
           </InputBlockMessage>
           {resettable && <button
             disabled={!resettable}
-            className="button text-xs ghost" onClick={reset}>
+            className="button text-xs ghost" onClick={() => {
+              setIsFocus(false)
+              reset()
+            }}>
             Revert
           </button>}
           {isChanged && <button
             disabled={!saveable}
             className="button text-xs" onClick={() => {
               onSave(value)
+              setIsFocus(false)
             }}>
             Save
           </button>}
         </InputBlockFooter>
       }
     </InputBlock>
-    <InputDescription>{description}</InputDescription>
-  </>
+    {
+      // isEditing &&
+      true &&
+      <InputDescription>
+        {description}
+      </InputDescription>
+    }
+  </div>
 }
-
 
 
 
@@ -209,16 +243,11 @@ function ProjectNameInput() {
   const [ userSettings, updateUserSettings ] = useUserSettings()
   const isCheckAvailEnabled = userSettings.checkProjectNameOnNPM
 
-  // const [ isCheckAvailEnabled, setIsCheckAvailEnabled ] = useState(false)
-  // useEffect(() => {
-  //   call
-  // }, [ isCheckAvailEnabled  ])
   const field = useField(packageJson.name, {
     validate: (value) => packageJsonParser.name.validate(value, () => false),
     warn: packageJsonParser.name.warn,
   })
   const name = field.value
-
 
   const [ checkResult, isLoading, resetCheck ] = useAsync(async signal => {
     if (!isCheckAvailEnabled) return { status: "disabled" as const }
@@ -260,12 +289,7 @@ function ProjectNameInput() {
         The name of the package. If If you don't plan to publish your package, the name and version fields are optional.
 
         <div className="flex flex-row gap-2 items-center cursor-pointer group"
-          onClick={() => {
-            // setIsCheckAvailEnabled(v => !v)
-            updateUserSettings({ checkProjectNameOnNPM: !isCheckAvailEnabled })
-            // updateUserSettings(prev => ({ ...prev, checkProjectNameOnNPM: !prev.checkProjectNameOnNPM }))
-            // updateUserSettings({ ...userSettings, checkProjectNameOnNPM: !isCheckAvailEnabled })
-          }}
+          onClick={() => updateUserSettings({ checkProjectNameOnNPM: !isCheckAvailEnabled })}
         >
           <div className={cn("rounded-full bg-bg-2 p-1 w-8 transition-[background]",
             isCheckAvailEnabled ? "bg-slate-600" : ""
@@ -278,21 +302,11 @@ function ProjectNameInput() {
             Check Availability on NPM
           </div>
         </div>
-        {/* <div className="flex flex-row gap-2 items-baseline">
-          <button className="button text-xs" onClick={() => startTransition(dispatch)}>
-            Check
-          </button>
-          <div className="text-xs">
-            {pending === true && <div className="text-fg-3">Checking if this name exists on npm...</div>}
-            {pending === false && state === "exists" && <div className="text-error">"{field.value}" is already taken on npm.</div>}
-            {pending === false && state === "available" && <div className="text-success">"{field.value}" is available on npm.</div>}
-            {pending === false && state === "error" && <div className="text-error">There was an error checking if this name exists. Please try again later.</div>}
-          </div>
-        </div> */}
       </div>}
     />
   </div>
 }
+
 
 function ProjectVersionInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson()
@@ -313,6 +327,8 @@ function ProjectVersionInput() {
     />
   </div>
 }
+
+
 
 function ProjectDescriptionInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson()
@@ -339,7 +355,7 @@ function ProjectDescriptionInput() {
 
 
 
-const ListInput = (props: Omit<ComponentProps<"input">, 'value' | 'onChange'> & {
+const StringListInput = (props: Omit<ComponentProps<"input">, 'value' | 'onChange'> & {
   value: string[],
   onChange: (value: string[]) => void,
   inputPlaceholder?: string,
@@ -425,8 +441,8 @@ const ListInput = (props: Omit<ComponentProps<"input">, 'value' | 'onChange'> & 
       </div>
     </div>
   )
-
 }
+
 
 
 function ProjectKeywordsInput() {
@@ -446,7 +462,7 @@ function ProjectKeywordsInput() {
         updatePackageJson(newPackageJson)
       }}
       renderInput={() =>
-        <ListInput
+        <StringListInput
           value={field.value ?? []}
           onChange={field.setValue}
         />
@@ -456,6 +472,8 @@ function ProjectKeywordsInput() {
     />
   </div>
 }
+
+
 
 function ProjectURLInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson()
@@ -479,32 +497,56 @@ function ProjectURLInput() {
   </div>
 }
 
+
+function SubInput<T extends string | number | readonly string[] | undefined>(props: {
+  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>,
+  value: T | undefined,
+  placeholder: string,
+  onSetNotUndefined: () => void,
+  onSetUndefined: () => void,
+  inputOnChange: (e: ChangeEvent<HTMLInputElement>) => void,
+  setLabel: React.ReactNode,
+  error?: string,
+}) {
+  return (
+    <div className="">
+      <div className="flex gap-1 items-center px-2 -ml-1">
+        <props.Icon className="text-fg-4 text-lg shrink-0 w-5 h-5" />
+        {props.value === undefined ?
+          <InputWideButton onClick={props.onSetNotUndefined} className="-mr-2">
+            <LucidePlus />{props.setLabel}
+          </InputWideButton>
+          :
+          <>
+            <Input className="" placeholder={props.placeholder} value={props.value} onChange={props.inputOnChange} />
+            <CloseButton onClick={props.onSetUndefined} />
+          </>
+        }
+      </div>
+      <ErrorMessage error={props.error} className="ml-9 text-xs -mt-1" />
+    </div>
+  )
+}
+function SubInputFooter(props: ComponentProps<"div">) {
+  return <div {...props} className={cn("flex items-center gap-2 px-2 py-1 text-xs", props.className)} />
+}
+
+
+
+function MaterialSymbolsAlternateEmail(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE */}<path fill="currentColor" d="M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12v1.45q0 1.475-1.012 2.513T18.5 17q-.875 0-1.65-.375t-1.3-1.075q-.725.725-1.638 1.088T12 17q-2.075 0-3.537-1.463T7 12t1.463-3.537T12 7t3.538 1.463T17 12v1.45q0 .65.425 1.1T18.5 15t1.075-.45t.425-1.1V12q0-3.35-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20h5v2zm0-7q1.25 0 2.125-.875T15 12t-.875-2.125T12 9t-2.125.875T9 12t.875 2.125T12 15" /></svg>) }
+function MingcuteAttachmentLine(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from MingCute Icon by MingCute Design - https://github.com/Richard9394/MingCute/blob/main/LICENSE */}<g fill="none" fillRule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z" /><path fill="currentColor" d="M18.71 17.565a4.25 4.25 0 0 0 0-6.01l-6.54-6.54A1 1 0 0 1 13.584 3.6l6.54 6.54a6.25 6.25 0 1 1-8.838 8.84l-7.954-7.955A4.501 4.501 0 0 1 9.698 4.66l7.953 7.953a2.752 2.752 0 0 1-3.892 3.891L6.513 9.257a1 1 0 0 1 1.414-1.415l7.247 7.247a.751.751 0 0 0 1.063-1.062L8.284 6.074A2.501 2.501 0 0 0 4.746 9.61l7.954 7.954a4.25 4.25 0 0 0 6.01 0Z" /></g></svg>) }
+
 function ProjectBugsInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson()
   const field = useField(packageJson.bugs, {
     validate: (value) => packageJsonParser.bugs.validate(value),
+    equalityCheck: packageJsonParser.bugs.isEqual,
     clearable: true,
     defaultData: () => ({}),
-    equalityCheck: (a, b) => {
-      if (typeof a === "string" && typeof b === "string")
-        return a === b
-      if (typeof a === "object" && a !== null && typeof b === "object" && b !== null)
-        return a.url === b.url && a.email === b.email
-      if (typeof a === "string" && typeof b === "object" && 'url' in b && typeof b.url === "string")
-        return a === b.url
-      if (typeof b === "string" && typeof a === "object" && 'url' in a && typeof a.url === "string")
-        return a.url === b
-      else
-        return a === b
-    }
   })
 
-  function MaterialSymbolsAlternateEmail(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE */}<path fill="currentColor" d="M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12v1.45q0 1.475-1.012 2.513T18.5 17q-.875 0-1.65-.375t-1.3-1.075q-.725.725-1.638 1.088T12 17q-2.075 0-3.537-1.463T7 12t1.463-3.537T12 7t3.538 1.463T17 12v1.45q0 .65.425 1.1T18.5 15t1.075-.45t.425-1.1V12q0-3.35-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20h5v2zm0-7q1.25 0 2.125-.875T15 12t-.875-2.125T12 9t-2.125.875T9 12t.875 2.125T12 15" /></svg>) }
-  function MingcuteAttachmentLine(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from MingCute Icon by MingCute Design - https://github.com/Richard9394/MingCute/blob/main/LICENSE */}<g fill="none" fillRule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z" /><path fill="currentColor" d="M18.71 17.565a4.25 4.25 0 0 0 0-6.01l-6.54-6.54A1 1 0 0 1 13.584 3.6l6.54 6.54a6.25 6.25 0 1 1-8.838 8.84l-7.954-7.955A4.501 4.501 0 0 1 9.698 4.66l7.953 7.953a2.752 2.752 0 0 1-3.892 3.891L6.513 9.257a1 1 0 0 1 1.414-1.415l7.247 7.247a.751.751 0 0 0 1.063-1.062L8.284 6.074A2.501 2.501 0 0 0 4.746 9.61l7.954 7.954a4.25 4.25 0 0 0 6.01 0Z" /></g></svg>) }
 
-  const CloseButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost p-1 text-fg-4 hover:text-fg-3", props.className)}>
-    <LucideX />
-  </button>
+
 
   const url = typeof field.value === "string" ? field.value : field.value?.url
   const email = typeof field.value === "string" ? undefined : field.value?.email
@@ -527,34 +569,25 @@ function ProjectBugsInput() {
       }}
       renderInput={() =>
         <div className="flex flex-col">
+          <SubInput
+            Icon={MingcuteAttachmentLine}
+            value={url}
+            placeholder="URL"
+            onSetNotUndefined={setUrl}
+            onSetUndefined={unsetUrl}
+            inputOnChange={changeUrl}
+            setLabel="Set URL"
+          />
 
-          <div className="flex gap-1 items-center px-2">
-            <MingcuteAttachmentLine className="text-fg-4 text-lg shrink-0" />
-            {url === undefined ?
-              <InputWideButton onClick={setUrl}>
-                <LucidePlus />Set URL
-              </InputWideButton>
-              :
-              <>
-                <Input className="" placeholder="url" value={url} onChange={changeUrl} />
-                <CloseButton onClick={unsetUrl} />
-              </>
-            }
-          </div>
-
-          <div className="flex gap-1 items-center px-2">
-            <MaterialSymbolsAlternateEmail className="text-fg-4 text-lg shrink-0" />
-            {email === undefined ?
-              <InputWideButton onClick={setEmail}>
-                <LucidePlus />Set email
-              </InputWideButton>
-              :
-              <>
-                <Input className="" placeholder="email" value={email} onChange={changeEmail} />
-                <CloseButton onClick={unsetEmail} />
-              </>
-            }
-          </div>
+          <SubInput
+            Icon={MaterialSymbolsAlternateEmail}
+            value={email}
+            placeholder="Email"
+            onSetNotUndefined={setEmail}
+            onSetUndefined={unsetEmail}
+            inputOnChange={changeEmail}
+            setLabel="Set email"
+          />
         </div>}
       description="The URL to the project's issue tracker. If a URL is provided, it will 
       be used by the `npm bugs` command."
@@ -563,10 +596,11 @@ function ProjectBugsInput() {
 }
 
 
+
 // Requirements:
-// - [ ] no license means "All rights reserved"
-// - [ ] error: must uses SPDX license identifier (fetch list)
-// - [ ] warn: consider using one that are OSI approvied
+// - [v] no license means "All rights reserved"
+// - [v] error: must uses SPDX license identifier (fetch list)
+// - [v] warn: consider using one that are OSI approvied
 // - [ ] error: multiple must follow SPDX format (e.g. MIT OR Apache-2.0)
 // - [ ] support for custom license file (e.g. "SEE LICENSE IN LICENSE.txt")
 // - [ ] only allow max 2 licenses because SPDX format for multiple licenses is hard to parse and validate, and it's uncommon to have more than 2 licenses. If more than 2 licenses are needed, users can use a custom license file.
@@ -578,6 +612,7 @@ function ProjectLicenseInput() {
   const [ licenses, loading ] = useAsync(async (signal) => {
     const res = await call("getValidLicenses")
     if (res.status !== "ok") throw new Error(res.status)
+    res.licenses.push({ id: "UNLICENSED", name: "Unlicensed, All rights reserved.", osiApproved: false })
     return res.licenses
   }, [])
 
@@ -596,17 +631,22 @@ function ProjectLicenseInput() {
         newPackageJson.license = licensesText
         updatePackageJson(newPackageJson)
       }}
+      description="License for the project. Should be a valid SPDX license identifier, e.g. MIT or Apache-2.0 OR MIT."
+      extraMessages={
+        field.value === undefined ?
+          "No license specified means \"All rights reserved\". If your project is unlicensed, set the license to \"UNLICENSED\"." : undefined}
       renderInput={() => {
-        return <div className="relative">
+        return <div>
           <Input
             value={field.value} onChange={(e) => field.setValue(e.currentTarget.value)}
             placeholder="SPDX license identifier, e.g. MIT or Apache-2.0 OR MIT"
             className="peer"
           />
-
           {/* License List */}
-          {(field.isEditing) &&
-            <div className="grid grid-rows-[0fr] overflow-clip">
+          <div
+            data-opened={field.isEditing ? "" : undefined}
+            className={cn("relative grid overflow-clip transition-all duration-250 grid-rows-[0fr] data-opened:grid-rows-[1fr]")}>
+            <div className="min-h-0">
               <div className="border-t border-t-fg-4 mb-2 mx-1.5" />
               <div className="h-40 px-2 overflow-y-auto flex flex-col">
                 {licenses.status === "loading" ? <LoadingMessage>Loading valid licenses...</LoadingMessage> :
@@ -634,11 +674,163 @@ function ProjectLicenseInput() {
                 }
               </div>
             </div>
-          }
+          </div>
+
         </div>
       }}
     />
   </div>
+}
 
+
+
+function ProjectAuthorInput() {
+  const [ packageJson, updatePackageJson ] = usePackageJson()
+
+  const field = useField(
+    packageJsonParser.author.normalize(packageJson.author),
+    {
+      validate: (value) => packageJsonParser.author.validate(value),
+      equalityCheck: packageJsonParser.author.isEqual,
+      defaultData: () => ({ name: "" }),
+      clearable: true,
+    }, [])
+
+  return (
+    <div>
+      <BasicField
+        {...field}
+        onSave={(author) => {
+          const newPackageJson = { ...packageJson }
+          newPackageJson.author = author
+          updatePackageJson(newPackageJson)
+        }}
+        label={"Author"}
+        description="The author of the package."
+        renderInput={() => {
+          return <div className="flex flex-col">
+            <SubInput
+              Icon={LucideUser}
+              value={field.value?.name}
+              placeholder="Name"
+              onSetNotUndefined={() => field.setValue({ name: "" })}
+              onSetUndefined={() => field.setValue(undefined)}
+              inputOnChange={(e) => field.setValue({ ...field.value, name: e.target.value } as any)}
+              setLabel="Set name"
+              error={typeof field.error === "object" ? field.error.name : undefined}
+            />
+            <SubInput
+              Icon={MaterialSymbolsAlternateEmail}
+              value={field.value?.email}
+              placeholder="Email"
+              onSetNotUndefined={() => field.setValue({ ...field.value, email: "" } as any)}
+              onSetUndefined={() => field.setValue({ ...field.value, email: undefined } as any)}
+              inputOnChange={(e) => field.setValue({ ...field.value, email: e.target.value } as any)}
+              setLabel="Set email"
+              error={typeof field.error === "object" ? field.error.email : undefined}
+            />
+            <SubInput
+              Icon={MingcuteAttachmentLine}
+              value={field.value?.url}
+              placeholder="URL"
+              onSetNotUndefined={() => field.setValue({ ...field.value, url: "" } as any)}
+              onSetUndefined={() => field.setValue({ ...field.value, url: undefined } as any)}
+              inputOnChange={(e) => field.setValue({ ...field.value, url: e.target.value } as any)}
+              setLabel="Set URL"
+              error={typeof field.error === "object" ? field.error.url : undefined}
+            />
+
+          </div>
+        }}
+      />
+    </div>
+  )
+}
+
+
+
+function ProjectContributorsInput() {
+  const [ packageJson, updatePackageJson ] = usePackageJson()
+
+  const field = useField(
+    packageJsonParser.contributors.normalize(packageJson.contributors), {
+    validate: function (value) {
+      return packageJsonParser.contributors.validate(value)
+    },
+    clearable: true,
+    defaultData: () => [ { name: "" } ],
+  }, [])
+
+
+  const subinputOnChange = (i: number, key: "name" | "email" | "url", value: string) => {
+    field.setValue(field.value?.map((c, idx) => idx === i ? { ...c, [ key ]: value } : c))
+  }
+  const unsetEmail = (i: number) => field.setValue(field.value?.map((c, idx) => idx === i ? { ...c, email: undefined } : c))
+  const unsetUrl = (i: number) => field.setValue(field.value?.map((c, idx) => idx === i ? { ...c, url: undefined } : c))
+  const unsetUsername = (i: number) => field.value?.length === 1 ? field.setValue(undefined) : field.setValue(field.value?.filter((_, idx) => idx !== i))
+
+  const addEmail = (i: number) => field.setValue(field.value?.map((c, idx) => idx === i ? { ...c, email: "" } : c))
+  const addUrl = (i: number) => field.setValue(field.value?.map((c, idx) => idx === i ? { ...c, url: "" } : c))
+
+  return (
+    <BasicField
+      onSave={(value) => {
+        updatePackageJson({ ...packageJson, contributors: value })
+      }}
+      label={"Contributors"}
+      unsetLabel={"Add contributor"}
+      {...field}
+      renderInput={() => {
+        return <div className="flex flex-col gap-2">
+          {field.value?.map((e, i) => {
+            const normalized = packageJsonParser.author.normalize(e) ?? { name: "" }
+            return <div className="flex flex-col" key={i}>
+              <SubInput
+                Icon={LucideUser}
+                value={normalized.name}
+                placeholder="Name"
+                onSetNotUndefined={() => { console.log("no-op/unreachable") }}
+                onSetUndefined={() => unsetUsername(i)}
+                inputOnChange={(ev) => subinputOnChange(i, "name", ev.target.value)}
+                setLabel="Set name"
+                error={Array.isArray(field.error) && typeof field.error[ i ] === "object" ? field.error[ i ].name : undefined}
+              />
+              <SubInput
+                Icon={MaterialSymbolsAlternateEmail}
+                value={normalized.email}
+                placeholder="Email"
+                onSetNotUndefined={() => addEmail(i)}
+                onSetUndefined={() => unsetEmail(i)}
+                inputOnChange={(ev) => subinputOnChange(i, "email", ev.target.value)}
+                setLabel="Set email"
+                error={Array.isArray(field.error) && typeof field.error[ i ] === "object" ? field.error[ i ].email : undefined}
+              />
+              <SubInput
+                Icon={MingcuteAttachmentLine}
+                value={normalized.url}
+                placeholder="URL"
+                onSetNotUndefined={() => addUrl(i)}
+                onSetUndefined={() => unsetUrl(i)}
+                inputOnChange={(ev) => subinputOnChange(i, "url", ev.target.value)}
+                setLabel="Set URL"
+                error={Array.isArray(field.error) && typeof field.error[ i ] === "object" ? field.error[ i ].url : undefined}
+              />
+              <SubInputFooter className="mb-1">
+                <ErrorMessage
+                  error={Array.isArray(field.error) && typeof field.error[ i ] !== "object" ? field.error[ i ] : undefined} />
+              </SubInputFooter>
+              <div className="border-t border-t-fg-4 mb-1 mx-1.5" />
+            </div>
+          })}
+          <InputWideButton
+            onClick={() => field.setValue([ ...(field.value ?? []), { name: "" } ])}
+          >
+            <LucidePlus />
+            Add Contributor
+          </InputWideButton>
+        </div>
+      }}
+    />
+  )
 
 }

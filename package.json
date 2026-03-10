@@ -33,8 +33,16 @@
     "rs"
   ],
   "homepage": "https://www.google.com",
-  "license": "NLPL",
   "bugs": {
     "url": "https://www.github.com/"
-  }
+  },
+  "license": "MIT-0",
+  "author": {
+    "name": "Alfonsus"
+  },
+  "contributors": [
+    {
+      "name": "Yee"
+    }
+  ]
 }

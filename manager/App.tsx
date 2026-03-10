@@ -66,7 +66,7 @@ function SubpageHeader(props: {
   onBackClick: () => void,
   title: React.ReactNode
 }) {
-  return <header className="flex items-center gap-1 sticky top-0 -m-4 mb-0 p-4 bg-bg z-50">
+  return <header className="flex items-center gap-1 sticky top-0 -m-4 mb-0 p-4 bg-bg z-50 h-16">
     <div className="cursor-pointer text-fg-3 w-8 h-8 -ml-1 rounded-2xl hover:bg-fg-2/10 grid place-items-center"
       onClick={props.onBackClick}
     >{'←'}</div>

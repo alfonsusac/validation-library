@@ -16,6 +16,13 @@ export type PackageJson = {
   dependencies?: Record<string, string>,
   devDependencies?: Record<string, string>,
   license?: string,
+  author?: string | {
+    name: string,
+    email?: string,
+    url?: string,
+  },
+  contributors?: PackageJson[ 'author' ][],
+  maintainers?: PackageJson[ 'author' ][],
 }
 
 

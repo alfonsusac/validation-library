@@ -1,3 +1,5 @@
+import type { PackageJson } from "./package-json"
+
 export const packageJsonParser = {
   name: {
     validate: (value: unknown, isExist: (value: string) => boolean) => {
@@ -85,35 +87,44 @@ export const packageJsonParser = {
       if (typeof value === "object") {
         if (!("url" in value) && !("email" in value))
           return "bugs must have at least one of url or email"
-        if ("url" in value && value.url !== undefined && typeof value.url !== "string")
-          return "bugs.url must be a string"
-        if ("url" in value && value.url !== undefined && typeof value.url === "string") {
-          try {
-            new URL(value.url)
-          } catch {
+        if ("url" in value && value.url !== undefined) {
+          if (typeof value.url !== "string")
+            return "bugs.url must be a string"
+          if (!validUrl(value.url))
             return "bugs.url must be a valid URL"
-          }
         }
-        if ("email" in value && value.email !== undefined && typeof value.email !== "string")
-          return "bugs.email must be a string"
-        // either one or both of url and email should be present
+        if ("email" in value && value.email !== undefined) {
+          if (typeof value.email !== "string")
+            return "bugs.email must be a string"
+          if (!validEmail(value.email))
+            return "bugs.email must be a valid email address"
+        }
       }
+    },
+    isEqual: (a: PackageJson[ 'bugs' ], b: PackageJson[ 'bugs' ]) => {
+      if (typeof a === "string" && typeof b === "string")
+        return a === b
+      if (typeof a === "object" && a !== null && typeof b === "object" && b !== null)
+        return a.url === b.url && a.email === b.email
+      if (typeof a === "string" && typeof b === "object" && 'url' in b && typeof b.url === "string")
+        return a === b.url
+      if (typeof b === "string" && typeof a === "object" && 'url' in a && typeof a.url === "string")
+        return a.url === b
+      else
+        return a === b
     }
   },
   license: {
-    // - [ ] no license means "All rights reserved"
-    // - [ ] error: must uses SPDX license identifier (fetch list)
-    // - [ ] warn: consider using one that are OSI approvied
+    // - [v] no license means "All rights reserved"
+    // - [v] error: must uses SPDX license identifier (fetch list)
+    // - [ ] info: consider using one that are OSI approvied
     // - [ ] error: multiple must follow SPDX format (e.g. MIT OR Apache-2.0)
     // - [ ] support for custom license file (e.g. "SEE LICENSE IN LICENSE.txt")
     // - [ ] only allow max 2 licenses because SPDX format for multiple licenses is hard to parse and validate, and it's uncommon to have more than 2 licenses. If more than 2 licenses are needed, users can use a custom license file.
-    // - [ ] allow unlicensed
+    // - [v] allow unlicensed
     validate: (value: unknown, validLicenses?: { id: string }[]) => {
-      if (typeof value === "undefined")
-        return
-      if (typeof value !== "string")
-        return "license must be a string"
-      // Todo : validate with SPDX expression
+      if (typeof value === "undefined") return
+      if (typeof value !== "string") return "license must be a string"
       if (value === "UNLICENSED")
         return
       if (value.startsWith("SEE LICENSE IN ")) {
@@ -128,5 +139,159 @@ export const packageJsonParser = {
       if (validLicenses && validLicenses.map(l => l.id).includes(value) === false)
         return "license must be a valid SPDX license identifier"
     }
+  },
+  commons: {
+    requireURL: {
+      validate: (value: unknown) => {
+        if (typeof value === "undefined") return "URL is required"
+        if (typeof value !== "string") return "URL must be a string"
+        if (!validUrl(value)) return "URL must be a valid URL"
+      }
+    },
+    optionalURL: {
+      validate: (value: unknown) => {
+        if (typeof value === "undefined") return
+        return packageJsonParser.commons.requireURL.validate(value)
+      }
+    },
+    optionalEmail: {
+      validate: (value: unknown) => {
+        if (typeof value === "undefined") return
+        if (typeof value !== "string") return "email must be a string"
+        if (!validEmail(value)) return "email must be a valid email address"
+      }
+    }
+  },
+  author: {
+    validate: (value: unknown) => {
+      return validatePerson(value, "author")
+    },
+    normalize(val: PackageJson[ 'author' ]) {
+      if (typeof val === "undefined") return val
+      if (typeof val === "object" && val !== null) return val
+      // parse string in the format of "name <email> (url)"
+      const regex = /^([^<(]+)(?:<([^>]+)>)?(?:\(([^)]+)\))?$/
+      const match = val.match(regex)
+      if (!match)
+        return { name: val.trim() }
+      const name = match[ 1 ].trim()
+      const email = match[ 2 ]?.trim()
+      const url = match[ 3 ]?.trim()
+      const result: { name: string, email?: string, url?: string } = { name }
+      if (email) result.email = email
+      if (url) result.url = url
+      return result
+    },
+    isEqual: (A: PackageJson[ 'author' ], B: PackageJson[ 'author' ]) => {
+      const a = packageJsonParser.author.normalize(A)
+      const b = packageJsonParser.author.normalize(B)
+      return JSON.stringify(a) === JSON.stringify(b)
+    }
+  },
+  contributors: {
+    normalize(val: PackageJson[ 'contributors' ]) {
+      // traverse array,
+      // if string encountered, change to object with name only, and trim whitespace
+      const normalizePerson = packageJsonParser.author.normalize
+      if (val === undefined) return val
+      for (let i = 0; i < val.length; i++) {
+        const contributor = val[ i ]
+        if (typeof contributor === "string") {
+          val[ i ] = normalizePerson(contributor)
+        } else if (typeof contributor === "object" && contributor !== null && "name" in contributor) {
+          contributor.name = contributor.name.trim()
+        }
+      }
+      return val as { name: string, email?: string, url?: string }[]
+    },
+    validate(val: unknown) {
+      if (typeof val === "undefined")
+        return
+      if (!Array.isArray(val))
+        return "contributors must be an array"
+      const errors: ({
+        name: string | undefined,
+        email: string | undefined,
+        url: string | undefined
+      } | string | undefined)[] = val.map((value, index) => {
+        return validatePerson(value, `contributor[${ index }]`)
+      })
+      if (errors.every(e => typeof e === "undefined"))
+        return
+      return errors
+
+      
+
+      // for (let i = 0; i < val.length; i++) {
+      //   const res = validatePerson(val[ i ], `contributor[${ i }]`)
+      //   if (typeof res === "string")
+      //     return `${ ordinalize(i + 1) } contributor is invalid`
+      // }
+    },
+    // validateEach(val: unknown) {
+    //   return validatePerson(val, "contributor")
+    // },
+    isEqual(A: PackageJson[ 'contributors' ], B: PackageJson[ 'contributors' ]) {
+
+    }
   }
+}
+
+
+
+function ordinalize(n: number) {
+  const s = [ "th", "st", "nd", "rd" ]
+  const v = n % 100
+  return n + (s[ (v - 20) % 10 ] || s[ v ] || s[ 0 ])
+}
+
+function validEmail(email: string) {
+  // Simple email regex for validation
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return re.test(email)
+}
+
+function validUrl(url: string) {
+  try {
+    new URL(url)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function validatePerson(value: unknown, varname: string) {
+  if (typeof value === "undefined")
+    return
+  if (typeof value === "string")
+    return
+  if (typeof value !== "object" || value === null)
+    return `${ varname } must be a string or an object`
+  const error = {
+    name: (() => {
+      if (!("name" in value))
+        return `name is required` as const
+      if (typeof value.name !== "string" || value.name.length === 0)
+        return `name must be a string` as const
+    })(),
+    email: (() => {
+      if ("email" in value && value.email !== undefined) {
+        if (typeof value.email !== "string")
+          return `email must be a string` as const
+        if (!validEmail(value.email))
+          return `email must be a valid email address` as const
+      }
+    })(),
+    url: (() => {
+      if ("url" in value && value.url !== undefined) {
+        if (typeof value.url !== "string")
+          return `url must be a string` as const
+        if (!validUrl(value.url))
+          return `url must be a valid URL` as const
+      }
+    })()
+  }
+  if (Object.values(error).some(v => typeof v === "string"))
+    return error
+  return
 }
