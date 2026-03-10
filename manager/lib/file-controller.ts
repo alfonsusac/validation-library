@@ -8,6 +8,7 @@ export function FileController<O>(
   path: `./${ string }`,
   reader: (file: Bun.BunFile) => MaybePromise<O>,
   writer: (file: Bun.BunFile, data: O) => MaybePromise<any>,
+  watch?: boolean
 ) {
   const file = Bun.file(path)
   const store = {
@@ -25,6 +26,7 @@ export function FileController<O>(
   }
   async function initialize() {
     store.content = await reader(file)
+    if (!watch) return
     store.watcher = fs.watch(path, async (evType) => {
       if (evType !== "change") return
       store.content = await reader(file)
@@ -49,10 +51,11 @@ export function FileController<O>(
 
 
 
-export function WatchJsonFile<JSON>(
+export function JSONFileController<JSON>(
   path: `./${ string }`,
   options?: {
-    onNotExist?: (file: Bun.BunFile) => MaybePromise<JSON>
+    onNotExist?: "create" | ((file: Bun.BunFile) => MaybePromise<JSON>)
+    watch?: boolean
   }
 ) {
   return FileController<JSON>(path,
@@ -62,6 +65,10 @@ export function WatchJsonFile<JSON>(
         return JSON.parse(text)
       } catch (error) {
         if (getErrorCode(error) === "ENOENT") {
+          if (options?.onNotExist === "create") {
+            await file.write("{}")
+            return {} as JSON
+          }
           return await options?.onNotExist?.(file)
         }
         throw error
@@ -69,6 +76,7 @@ export function WatchJsonFile<JSON>(
     },
     async (file, data) => {
       return file.write(JSON.stringify(data, null, 2))
-    }
+    },
+    options?.watch
   )
 }

@@ -1,31 +1,29 @@
-import { jfetch } from "../lib/fetch"
+import { jsonfetch } from "../lib/fetch"
 
 
 export async function checkNPMName(name: string) {
   const url = `https://registry.npmjs.org/${ name }`
-  const res = await jfetch(url)
+  const res = await jsonfetch<{
+    _id: string
+  }>(url)
 
-  if (res.status === "fetch error") {
+  if (res.status === "fetch error")
     return "fetch error"
-  }
 
-  if (res.response.status === 404) {
+  if (res.status === "parse error")
+    return "malformed error"
+
+  if (res.res.status === 404)
     return "available" // OK
-  }
 
-  if (!res.response.ok) {
+  if (!res.res.ok)
     return "unexpected server response"
-  }
 
-  if (res.json.status === "parse error") {
-    return "malformed json"
+  const json = res.json
+  try {
+    return json._id
+  } catch (error) {
+    console.error("Error parsing JSON response:", error)
+    return "unexpected response data"
   }
-
-  const json = res.json.jsondata
-  if (typeof json === "object" && json !== null
-    && "_id" in json && typeof json._id === "string"
-  ) {
-    return "exists"
-  }
-  return "unexpected response data"
 }

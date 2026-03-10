@@ -1,15 +1,15 @@
 import { EventEmitter, RPCMethods, type EventPublisherFn } from "../lib/ws2-core"
-import { WatchJsonFile } from "../lib/file-controller"
+import { JSONFileController } from "../lib/file-controller"
 
 export type UserSettings = {
   checkProjectNameOnNPM: boolean,
   route: string
 }
 
-export function UserSettings(
+export async function UserSettings(
   publisherFn: EventPublisherFn
 ) {
-  const file = WatchJsonFile<UserSettings>('./manager/settings.json', {
+  const file = JSONFileController<UserSettings>('./manager/settings.json', {
     onNotExist: async (file) => {
       const defaultSettings: UserSettings = {
         checkProjectNameOnNPM: false,
@@ -31,8 +31,8 @@ export function UserSettings(
       await file.set(updatedData)
     }
   })
+  await file.initialize()
   file.subscribe(content => publisher.publish("user-settings-updated", content))
-  file.initialize()
   return {
     methods: methods,
     events: publisher.events,

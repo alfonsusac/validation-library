@@ -5,6 +5,7 @@ import { PackageJson } from "./features/package-json"
 import { UserSettings } from "./features/user-settings"
 import { color } from "bun"
 import { Pinger } from "./features/pinger"
+import { DataCache } from "./lib/fetch-cache"
 
 export function log(...args: any[]) {
   console.log(`${ color("darkgreen", "ansi") }server\x1b[0m`, ...args)
@@ -14,9 +15,12 @@ export const startManager = async () => {
   const publisher = ServerEventPublisher("global",
     // (payload) => { log("Publishing global event:", [ payload.evName ]) }
   )
-  const packageJson = PackageJson(publisher.publish)
-  const userSettings = UserSettings(publisher.publish)
+  const dataCache = DataCache('./manager/cache.json', { expiry: "5m" })
+  await dataCache.initialize()
+  const packageJson = await PackageJson(publisher.publish, dataCache)
+  const userSettings = await UserSettings(publisher.publish)
   const pinger = Pinger(publisher.publish)
+
   const server = await appServer({
     publisher,
     methods: {
@@ -32,6 +36,7 @@ export const startManager = async () => {
     },
     logger: log
   })
+
   publisher.initialize(server.server)
   onProcessExit(() => {
     server.server.stop()
