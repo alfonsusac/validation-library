@@ -84,22 +84,27 @@ export const packageJsonParser = {
         return "bugs must be an object or a string"
       if (value === null)
         return "bugs cannot be null"
-      if (typeof value === "object") {
-        if (!("url" in value) && !("email" in value))
-          return "bugs must have at least one of url or email"
-        if ("url" in value && value.url !== undefined) {
-          if (typeof value.url !== "string")
-            return "bugs.url must be a string"
-          if (!validUrl(value.url))
-            return "bugs.url must be a valid URL"
-        }
-        if ("email" in value && value.email !== undefined) {
-          if (typeof value.email !== "string")
-            return "bugs.email must be a string"
-          if (!validEmail(value.email))
-            return "bugs.email must be a valid email address"
-        }
+      const errors = {
+        url: (() => {
+          if (typeof value === "object" && "url" in value && value.url !== undefined) {
+            if (typeof value.url !== "string")
+              return "url must be a string"
+            if (!validUrl(value.url))
+              return "url must be a valid URL"
+          }
+        })(),
+        email: (() => {
+          if (typeof value === "object" && "email" in value && value.email !== undefined) {
+            if (typeof value.email !== "string")
+              return "email must be a string"
+            if (!validEmail(value.email))
+              return "email must be a valid email address"
+          }
+        })()
       }
+      if (typeof errors.url === "string" || typeof errors.email === "string")
+        return errors
+      return
     },
     isEqual: (a: PackageJson[ 'bugs' ], b: PackageJson[ 'bugs' ]) => {
       if (typeof a === "string" && typeof b === "string")
@@ -220,7 +225,7 @@ export const packageJsonParser = {
         return
       return errors
 
-      
+
 
       // for (let i = 0; i < val.length; i++) {
       //   const res = validatePerson(val[ i ], `contributor[${ i }]`)

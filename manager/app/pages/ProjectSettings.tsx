@@ -10,7 +10,7 @@ import { call } from "../app-client"
 
 const H2 = (props: ComponentProps<"h2">) => <h2
   {...props}
-  className={cn("text-lg text-fg sticky top-16 bg-bg z-10 pb-3 -mb-3", props.className)}
+  className={cn("text-lg text-fg font-medium sticky top-16 bg-bg z-10 pb-3 -mb-3", props.className)}
   onClick={(e) => {
     window.scrollTo({ top: e.currentTarget.offsetTop - 16, behavior: "smooth" })
   }}
@@ -538,15 +538,13 @@ function MingcuteAttachmentLine(props: React.SVGProps<SVGSVGElement>) { return (
 
 function ProjectBugsInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson()
+
   const field = useField(packageJson.bugs, {
-    validate: (value) => packageJsonParser.bugs.validate(value),
+    validate: packageJsonParser.bugs.validate,
     equalityCheck: packageJsonParser.bugs.isEqual,
     clearable: true,
     defaultData: () => ({}),
   })
-
-
-
 
   const url = typeof field.value === "string" ? field.value : field.value?.url
   const email = typeof field.value === "string" ? undefined : field.value?.email
@@ -577,6 +575,7 @@ function ProjectBugsInput() {
             onSetUndefined={unsetUrl}
             inputOnChange={changeUrl}
             setLabel="Set URL"
+            error={typeof field.error === "object" ? field.error.url : undefined}
           />
 
           <SubInput
@@ -587,6 +586,7 @@ function ProjectBugsInput() {
             onSetUndefined={unsetEmail}
             inputOnChange={changeEmail}
             setLabel="Set email"
+            error={typeof field.error === "object" ? field.error.email : undefined}
           />
         </div>}
       description="The URL to the project's issue tracker. If a URL is provided, it will 
