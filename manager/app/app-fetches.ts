@@ -1,4 +1,4 @@
-import { jsonfetch } from "../lib/fetch"
+import { jsonfetch } from "../lib/lib-fetch"
 
 
 export async function checkNPMName(name: string) {

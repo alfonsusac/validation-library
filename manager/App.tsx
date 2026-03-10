@@ -1,8 +1,8 @@
 import { newQueryClient, QueryClientProvider } from "./lib/react-store"
 import { usePackageJson } from "./features/package-json-client"
 import { useUserSettings } from "./features/user-settings-client"
-import { navigate, RoutePage } from "./app/app-client"
 import { ProjectSettings } from "./app/pages/ProjectSettings"
+import { navigate, RoutePage } from "./app/app-routes"
 
 const qc = newQueryClient()
 import.meta.hot.dispose(() => qc.cleanup())
@@ -20,7 +20,7 @@ export function AppRoot() {
 function App() {
 
   const [ packageJson ] = usePackageJson(false)
-  const { userSettings } = useUserSettings()
+  const [ userSettings ] = useUserSettings()
 
   return (
     <div className="p-4 relative h-screen w-screen max-w-xl overflow-x-hidden mx-auto">

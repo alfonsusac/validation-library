@@ -68,7 +68,15 @@ export function newQueryClient() {
       return storeMapData[ key ].store as Store<T>
     const cleanups: (() => void)[] = []
     const clean = (c: () => void) => { cleanups.push(c) }
-    const store = newStore(() => create(clean))
+    const store = newStore(() => {
+      const res = create(clean)
+      if (res instanceof Promise) {
+        res.then(data => store.update(data))
+        return undefined as unknown as T
+      } else {
+        return res
+      }
+    })
     storeMapData[ key ] = { store, cleanups }
     storeMap.update(storeMapData)
     return storeMapData[ key ].store as Store<T>
@@ -125,6 +133,7 @@ export function useQuery<T, T2 = T>(
     clean: (c: () => void) => void,
   ) => MaybePromise<T>,
   selector: ((data: T) => T2) = ((data: T) => data as unknown as T2),
+  required?: boolean // will throw error if true and data is not available yet
 ) {
   const client = useQueryClient()
   const data = useSyncExternalStore(
@@ -137,6 +146,9 @@ export function useQuery<T, T2 = T>(
       return selector(store.get())
     }
   )
+  if (required && data === undefined) {
+    throw new Error(`Data for store ${ key } is required but not available yet.`)
+  }
   function update(newData: T) {
     const store = client.getStore<T>(key)
     if (!store) throw new Error(`Store with key ${ key } not found. Can't update non-existing store.`)

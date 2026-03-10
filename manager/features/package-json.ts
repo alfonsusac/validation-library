@@ -1,7 +1,7 @@
-import { jsonfetch } from "../lib/fetch"
-import type { DataCacheType } from "../lib/fetch-cache"
+import { jsonfetch } from "../lib/lib-fetch"
+import type { DataCacheType } from "../lib/lib-cache"
 import { JSONFileController } from "../lib/file-controller"
-import { EventEmitter, type EventPublisherFn, RPCMethods } from "../lib/ws2-core"
+import { EventEmitter, type EventPublisherFn, RPCMethods } from "../lib/ws-core"
 
 export type PackageJson = {
   name: string,

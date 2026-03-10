@@ -1,4 +1,4 @@
-import { EventEmitter, RPCMethods, type EventPublisherFn } from "../lib/ws2-core"
+import { EventEmitter, RPCMethods, type EventPublisherFn } from "../lib/ws-core"
 import { JSONFileController } from "../lib/file-controller"
 
 export type UserSettings = {

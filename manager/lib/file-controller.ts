@@ -26,7 +26,7 @@ export function FileController<O>(
   }
   async function initialize() {
     store.content = await reader(file)
-    if (!watch) return
+    if (watch === false) return
     store.watcher = fs.watch(path, async (evType) => {
       if (evType !== "change") return
       store.content = await reader(file)

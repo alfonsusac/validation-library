@@ -1,5 +1,5 @@
 import { EventListener, Listener } from "./util-listener"
-import type { ServerEventPayload } from "./ws2-core"
+import type { ServerEventPayload } from "./ws-core"
 import { getErrorMessage } from "./util-get-error-message"
 import { newStore, useQuery, type Store } from "./react-store"
 import type { MaybePromise } from "bun"
@@ -17,17 +17,17 @@ export function createAppClient<
 
   // ws event part
   const id = Math.random().toString(16).slice(2, 6)
-  console.log("Creating AppClient with wsurl:", wsurl, `[${ id }]`)
+  // console.log("Creating AppClient with wsurl:", wsurl, `[${ id }]`)
   const ws = new WebSocket(wsurl)
   const event = new EventListener<{ [ K in keyof E ]: [ data: E[ K ] ] }>()
   const wsevent = newStore(() => ws.readyState)
 
   ws.onopen = () => {
-    console.log("ws) connected")
+    // console.log("ws) connected")
     wsevent.update(ws.readyState)
   }
   ws.onclose = () => {
-    console.log("ws) closed")
+    // console.log("ws) closed")
     wsevent.update(ws.readyState)
   }
   ws.onmessage = e => {
@@ -54,7 +54,7 @@ export function createAppClient<
   function subscribe<K extends keyof E>(eventName: K, handler: (data: E[ K ]) => void) {
     const cleanup = event.subscribe(eventName, handler)
     return () => {
-      console.log("Clearing", event.length(eventName), "listeners to event", eventName)
+      // console.log("Clearing", event.length(eventName), "listeners to event", eventName)
       cleanup()
     }
   }

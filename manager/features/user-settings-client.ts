@@ -1,26 +1,16 @@
-import { useSyncExternalStore } from "react"
 import { call, useAppClient } from "../app/app-client"
 import type { UserSettings } from "./user-settings"
+import { useQuery } from "../lib/react-store"
 
 export function useUserSettings() {
   const client = useAppClient()
-  const store = client.createOrRetrieveStore<UserSettings>("userSettings", async () => {
-    client.subscribe("user-settings-updated", (data) => store.update(data))
-    const res = await call("getUserSettings")
-    return res
+  const [ settings, updateSettingStore ] = useQuery("userSettings", async (clean) => {
+    clean(client.subscribe("user-settings-updated", data => updateSettingStore(data)))
+    return await call("getUserSettings")
   })
-  const userSettings = useSyncExternalStore(
-    store.subscribe,
-    store.get,
-  )!
-
-  async function update(cb: (prev: UserSettings) => UserSettings) {
-    const prev = store?.get()
-    if (!prev) return console.log("Update failed")
-    const newData = cb(prev)
-    await call("updateUserSettings", newData)
-    store?.update(newData)
+  async function update(payload: Partial<UserSettings>) {
+    if (!settings) return console.log("Update failed: settings not loaded yet")
+    call("updateUserSettings", payload)
   }
-
-  return { userSettings, updateUserSettings: update, subscribeStoreSettings: store.subscribe }
+  return [ settings, update ] as const
 }

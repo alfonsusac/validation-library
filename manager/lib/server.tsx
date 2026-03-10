@@ -1,5 +1,5 @@
 import type { MaybePromise } from "bun"
-import { RPCFetchHandlers, ServerEventPublisher, type EventMap } from "./ws2-core"
+import { RPCFetchHandlers, ServerEventPublisher, type EventMap } from "./ws-core"
 import { renderToString } from "react-dom/server"
 import path from "path"
 
@@ -100,3 +100,19 @@ function upgradeWsRoute(req: Bun.BunRequest<"/ws">, server: Bun.Server<undefined
     else return new Response("WebSocket upgrade failed", { status: 400 })
 }
 
+
+
+
+export function onProcessExit(callback: () => void) {
+  process.on("exit", callback)
+  process.on("SIGINT", () => {
+    console.log("\nExiting...")
+    callback()
+    process.exit(0)
+  })
+  process.on("uncaughtException", (err) => {
+    console.error("Uncaught Exception:", err)
+    callback()
+    process.exit(1)
+  })
+}

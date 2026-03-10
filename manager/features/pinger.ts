@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid"
-import { EventEmitter, type EventPublisherFn } from "../lib/ws2-core"
+import { EventEmitter, type EventPublisherFn } from "../lib/ws-core"
 
 export function Pinger(
   publishFn: EventPublisherFn

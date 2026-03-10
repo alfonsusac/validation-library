@@ -10,10 +10,6 @@ import { call } from "../app-client"
 
 export function ProjectSettings() {
 
-  useEffect(() => {
-    console.log("> ProjectSettings")
-  }, [])
-
   return <div className="flex flex-col gap-6 py-4">
     <ProjectNameInput />
     <ProjectVersionInput />
@@ -200,7 +196,7 @@ const BasicField = <T,>({
 
 function ProjectNameInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson()
-  const { userSettings, updateUserSettings } = useUserSettings()
+  const [ userSettings, updateUserSettings ] = useUserSettings()
   const isCheckAvailEnabled = userSettings.checkProjectNameOnNPM
 
   // const [ isCheckAvailEnabled, setIsCheckAvailEnabled ] = useState(false)
@@ -257,7 +253,8 @@ function ProjectNameInput() {
         <div className="flex flex-row gap-2 items-center cursor-pointer group"
           onClick={() => {
             // setIsCheckAvailEnabled(v => !v)
-            updateUserSettings(prev => ({ ...prev, checkProjectNameOnNPM: !prev.checkProjectNameOnNPM }))
+            updateUserSettings({ checkProjectNameOnNPM: !isCheckAvailEnabled })
+            // updateUserSettings(prev => ({ ...prev, checkProjectNameOnNPM: !prev.checkProjectNameOnNPM }))
             // updateUserSettings({ ...userSettings, checkProjectNameOnNPM: !isCheckAvailEnabled })
           }}
         >
