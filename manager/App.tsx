@@ -57,8 +57,6 @@ function App() {
         </div>
       </RoutePage>
 
-      <footer className="pt-20">
-      </footer>
     </div>
   )
 }

@@ -28,13 +28,13 @@
     "react-dom": "^19.2.4",
     "tailwindcss": "^4.2.1"
   },
-  "homepage": "https://www.github.com",
   "keywords": [
     "react",
     "rs"
   ],
+  "homepage": "https://www.google.com",
+  "license": "NLPL",
   "bugs": {
-    "url": "https://www.google.com"
-  },
-  "license": "CC-BY-NC-SA-1.0"
+    "url": "https://www.github.com/"
+  }
 }

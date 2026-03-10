@@ -13,6 +13,7 @@ export function RoutePage(props: {
 }) {
   const [ userSettings ] = useUserSettings()
 
+
   const currentRouteRef = useRef<string>(null)
   const prevRouteRef = useRef<string>(null)
 

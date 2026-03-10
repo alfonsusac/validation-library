@@ -23,7 +23,7 @@ export function ProjectSettings() {
 
 const Label = (props: ComponentProps<"label">) => <label {...props} className={cn("text-xs text-fg-2 px-2 block", props.className)} />
 const InputBlock = (props: ComponentProps<"div">) => <div {...props} className={cn("bg-bg-2 p-1 flex flex-col rounded outline-fg-4 focus-within:outline-2 my-2", props.className)} />
-const InputBlockFooter = (props: ComponentProps<"div">) => <div {...props} className={cn("flex items-baseline gap-2 p-1", props.className)} />
+const InputBlockFooter = (props: ComponentProps<"div"> & { expanded: boolean }) => <div {...props} className={cn("flex items-baseline gap-2 px-1", props.expanded ? "py-1" : "", props.className)} />
 const InputBlockMessage = (props: ComponentProps<"div">) => <div {...props} className={cn("text-xs text-fg-3 grow", props.className)} />
 const InputDescription = (props: ComponentProps<"div">) => <div {...props} className={cn("text-xs text-fg-3 px-2", props.className)} />
 
@@ -34,9 +34,9 @@ const LoadingMessage = (props: { children?: React.ReactNode }) => <div className
 const Messages = (props: { messages: string[] }) => <div className="text-fg-3/75">{props.messages.map((msg, i) => <div key={i}>{msg}</div>)}</div>
 const Input = (props: ComponentProps<"input">) => <input {...props} className={cn("w-full text-fg rounded p-1.5 px-2 font-mono text-sm outline-none placeholder:text-fg-4", props.className)} />
 const InputWideButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost text-start hover:bg-bg-3/50 flex items-center gap-1 px-2 py-1.5 grow", props.className)} />
-// function RadixIconsPlus(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 15 15" {...props}>{/* Icon from Radix Icons by WorkOS - https://github.com/radix-ui/icons/blob/master/LICENSE */}<path fill="currentColor" fillRule="evenodd" d="M8 2.75a.5.5 0 0 0-1 0V7H2.75a.5.5 0 0 0 0 1H7v4.25a.5.5 0 0 0 1 0V8h4.25a.5.5 0 0 0 0-1H8z" clipRule="evenodd" /></svg>) }
 function LucidePlus(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7-7v14" /></svg>) }
 function LucideX(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 6L6 18M6 6l12 12" /></svg>) }
+function LucideCheck(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 6L9 17l-5-5" /></svg>) }
 
 const useField = <T extends any>(initialData: T, opts:
   {
@@ -78,8 +78,6 @@ const useField = <T extends any>(initialData: T, opts:
   const resettable = isChanged
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue((e.target as any).value)
-    // only sets value of the state.
-    // if no need to use (e), just call setValue directly.
   }
   const reset = () => setValue(initialData)
 
@@ -102,20 +100,28 @@ const useField = <T extends any>(initialData: T, opts:
     }
   }
 
+  // Blur/Editing state
+  const [ isFocus, setIsFocus ] = useState(false)
+  const isEditing = isFocus || isChanged
+
   return {
     value, setValue, isChanged,
     error, warns, isValidating, isCheckingWarns, resetValidate, resetWarns,
     saveable, onChange,
     resettable, reset, exists, clearable: opts.clearable, onClear,
     onSetToNonUndefined, otherErrors,
+    isFocus, setIsFocus, isEditing
   } as const
 }
+
+const ClearButton = (props: { clearable?: boolean, exists: boolean, onClear: () => void }) => props.clearable && props.exists ? <button onClick={props.onClear} className="button ghost text-xs py-0 text-fg-4 hover:text-fg-3">Clear</button> : null
+const SetValueButton = (props: { onSetToNonUndefined: () => void }) => <InputWideButton onClick={props.onSetToNonUndefined}><LucidePlus />Set value</InputWideButton>
 
 const BasicField = <T,>({
   value, onChange, error, warns, saveable, onSave, resettable, reset, label,
   description, renderInput, hideFooter, placeholder, clearable, onClear, exists,
   isChanged, onSetToNonUndefined, isCheckingWarns, isValidating, otherErrors,
-  resetValidate, resetWarns, setValue, extraMessages
+  resetValidate, resetWarns, setValue, extraMessages, isFocus, setIsFocus
 }: ReturnType<typeof useField<T>> & {
   onSave: (value: T) => void,
   label: React.ReactNode,
@@ -128,63 +134,67 @@ const BasicField = <T,>({
   extraMessages?: React.ReactNode,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const clearButton = <button onClick={onClear} className="button ghost text-xs py-0 text-fg-4 hover:text-fg-3">
-    Clear
-  </button>
-
   const onInputEnter = (e: KeyboardEvent) => {
     if (e.key === "Enter")
       if (saveable) onSave(value)
   }
-  const inputProps = {
-    value, onChange, ref: inputRef, placeholder, onKeyDown: onInputEnter
-  }
+  const showSetValueButton = clearable && !exists
+
+
+  const isInputBlockFooterExpanded =
+    !!error || !!warns.length || !!otherErrors.length || !!extraMessages
+    || resettable || !!isValidating || !!isCheckingWarns
+    || isChanged
+
+  const inputProps = { value, onChange, ref: inputRef, placeholder, onKeyDown: onInputEnter }
 
   return <>
     <div className="flex">
-      <Label className="grow">
-        {label}
-      </Label>
-      {clearable && exists ? clearButton : null}
+      <Label className="grow">{label}</Label>
+      <ClearButton clearable={clearable} exists={exists} onClear={onClear} />
     </div>
-    <InputBlock onClick={() => inputRef.current?.focus()}>
-      {
-        (clearable && !exists) ?
-          <InputWideButton onClick={onSetToNonUndefined}>
-            <LucidePlus />
-            Set value
-          </InputWideButton>
-          : renderInput ?
-            renderInput(inputProps)
-            : <Input {...inputProps} value={String(value)} />
-      }
-      {
-        hideFooter ? null :
-          <InputBlockFooter>
-            <InputBlockMessage>
-              <ErrorMessage error={error} />
-              <WarnMessages warns={warns} />
-              <Messages messages={otherErrors} />
-              {
-                isValidating ? <LoadingMessage>Validating...</LoadingMessage> :
-                  isCheckingWarns && <LoadingMessage>Checking...</LoadingMessage>
-              }
-              {extraMessages}
-            </InputBlockMessage>
-            <button
-              disabled={!resettable}
-              className="button text-xs ghost" onClick={() => reset()}>
-              Revert
-            </button>
-            <button
-              disabled={!saveable}
-              className="button text-xs" onClick={() => {
-                onSave(value)
-              }}>
-              Save
-            </button>
-          </InputBlockFooter>
+    <InputBlock
+      onClick={() => inputRef.current?.focus()}
+      className="group/block"
+      onFocus={() => {
+        console.log("focused")
+        setIsFocus(true)
+      }}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) 
+          setIsFocus(false)
+        console.log("blurred")
+      }}
+      tabIndex={0}
+    >
+      {showSetValueButton ?
+        <SetValueButton onSetToNonUndefined={onSetToNonUndefined} />
+        : renderInput?.(inputProps)
+        ?? <Input {...inputProps} value={String(value)} />}
+      {hideFooter ? null :
+        <InputBlockFooter expanded={isInputBlockFooterExpanded}>
+          <InputBlockMessage>
+            <ErrorMessage error={error} />
+            <WarnMessages warns={warns} />
+            <Messages messages={otherErrors} />
+            {isValidating ? <LoadingMessage>Validating...</LoadingMessage> :
+              isCheckingWarns && <LoadingMessage>Checking...</LoadingMessage>
+            }
+            {extraMessages}
+          </InputBlockMessage>
+          {resettable && <button
+            disabled={!resettable}
+            className="button text-xs ghost" onClick={reset}>
+            Revert
+          </button>}
+          {isChanged && <button
+            disabled={!saveable}
+            className="button text-xs" onClick={() => {
+              onSave(value)
+            }}>
+            Save
+          </button>}
+        </InputBlockFooter>
       }
     </InputBlock>
     <InputDescription>{description}</InputDescription>
@@ -235,18 +245,17 @@ function ProjectNameInput() {
         updatePackageJson(newPackageJson)
       }}
       placeholder="my-package"
-      extraMessages={<>
-        {
-          checkResult.status === "idle" ? null :
-            checkResult.status === "loading" ? <LoadingMessage>Checking availability on npm...</LoadingMessage> :
-              checkResult.status === "error" ? <ErrorMessage error={checkResult.error} /> :
-                checkResult.result.status === "disabled" ? null :
-                  checkResult.result.status === "ok" ? <SuccessMessage>{checkResult.result.message}</SuccessMessage> :
-                    checkResult.result.status === "err" ? <ErrorMessage error={checkResult.result.message} /> :
-                      checkResult.result.status === "warn" ? <WarnMessages warns={[ checkResult.result.message ]} /> :
-                        null
-        }
-      </>}
+      extraMessages={
+        checkResult.status === "idle" ? null :
+          checkResult.status === "loading" ? <LoadingMessage>Checking availability on npm...</LoadingMessage> :
+            checkResult.status === "error" ? <ErrorMessage error={checkResult.error} /> :
+              checkResult.result.status === "disabled" ? null :
+                checkResult.result.status === "ok" ? <SuccessMessage>{checkResult.result.message}</SuccessMessage> :
+                  checkResult.result.status === "err" ? <ErrorMessage error={checkResult.result.message} /> :
+                    checkResult.result.status === "warn" ? <WarnMessages warns={[ checkResult.result.message ]} /> :
+                      null
+
+      }
       description={<div className="flex flex-col gap-2">
         The name of the package. If If you don't plan to publish your package, the name and version fields are optional.
 
@@ -299,7 +308,8 @@ function ProjectVersionInput() {
         newPackageJson.version = newVersion
         updatePackageJson(newPackageJson)
       }}
-      description="The version of the package. If you don't plan to publish your package, the name and version fields are optional."
+      description="The version of the package. If you don't plan to publish your package, 
+      the name and version fields are optional."
     />
   </div>
 }
@@ -320,7 +330,8 @@ function ProjectDescriptionInput() {
         newPackageJson.description = newDescription
         updatePackageJson(newPackageJson)
       }}
-      description="A brief description of the package. Helps people discover your package, as it's listed in `npm search`."
+      description="A brief description of the package. Helps people discover your 
+      package, as it's listed in `npm search`."
     />
   </div>
 }
@@ -440,7 +451,8 @@ function ProjectKeywordsInput() {
           onChange={field.setValue}
         />
       }
-      description="An array of keywords that describe the package. Helps people discover your package, as it's listed in `npm search`."
+      description="An array of keywords that describe the package. Helps people discover 
+      your package, as it's listed in `npm search`."
     />
   </div>
 }
@@ -544,7 +556,8 @@ function ProjectBugsInput() {
             }
           </div>
         </div>}
-      description="The URL to the project's issue tracker. If a URL is provided, it will be used by the `npm bugs` command."
+      description="The URL to the project's issue tracker. If a URL is provided, it will 
+      be used by the `npm bugs` command."
     />
   </div>
 }
@@ -584,41 +597,45 @@ function ProjectLicenseInput() {
         updatePackageJson(newPackageJson)
       }}
       renderInput={() => {
-        return <>
+        return <div className="relative">
           <Input
             value={field.value} onChange={(e) => field.setValue(e.currentTarget.value)}
             placeholder="SPDX license identifier, e.g. MIT or Apache-2.0 OR MIT"
+            className="peer"
           />
 
-          <div className="h-40 px-2 overflow-y-auto flex flex-col">
-            {licenses.status === "loading" ? <LoadingMessage>Loading valid licenses...</LoadingMessage> :
-              licenses.status === "error" ? <ErrorMessage error={licenses.error} /> :
-                licenses.status === "ok" ? licenses.result
-                  .sort((a, b) => Number(b.osiApproved) - Number(a.osiApproved) || a.id.localeCompare(b.id))
-                  .filter(l => field.value === undefined ? true : l.id.toLowerCase().includes(field.value.toLowerCase()) || l.name.toLowerCase().includes(field.value.toLowerCase()))
-                  .map((licenses) => {
-                    return <button className="py-1 hover:bg-bg-3/50 -mx-2 px-2 rounded-sm text-start shrink-0"
-                      onClick={() => field.setValue(licenses.id)}
-                    >
-                      <div className="font-mono text-sm">{licenses.id}</div>
-                      <div className="text-xs text-fg-3">{licenses.name}, {licenses.osiApproved ? "OSI Approved" : ""}</div>
-                    </button>
-                  }) : null
-            }
-          </div>
-
-
-          <InputBlockFooter>
-            {/* <InputBlockMessage>
-          {delayedVal.status === "ok" ? delayedVal.result :
-            delayedVal.status === "error" ? `Error: ${ delayedVal.error }` :
-              delayedVal.status === "loading" ? "Checking..." :
-                "Type a license to see validation result here."
+          {/* License List */}
+          {(field.isEditing) &&
+            <div className="grid grid-rows-[0fr] overflow-clip">
+              <div className="border-t border-t-fg-4 mb-2 mx-1.5" />
+              <div className="h-40 px-2 overflow-y-auto flex flex-col">
+                {licenses.status === "loading" ? <LoadingMessage>Loading valid licenses...</LoadingMessage> :
+                  licenses.status === "error" ? <ErrorMessage error={licenses.error} /> :
+                    licenses.status === "ok" ? licenses.result
+                      .sort((a, b) => Number(b.osiApproved) - Number(a.osiApproved) || a.id.localeCompare(b.id))
+                      .filter(l => field.value === undefined ? true : l.id.toLowerCase().includes(field.value.toLowerCase()) || l.name.toLowerCase().includes(field.value.toLowerCase()))
+                      .map((licenses) => {
+                        return <button
+                          key={licenses.id}
+                          className="py-1 hover:bg-bg-3/50 -mx-2 px-2 rounded-sm text-start shrink-0"
+                          onClick={() => field.setValue(licenses.id)}
+                        >
+                          <div className="font-mono text-sm">{licenses.id}
+                            {licenses.osiApproved ?
+                              <span className="ml-1 text-[0.7rem] font-sans font-medium text-fg-3 bg-bg-3 p-0.5 px-1 leading-4 rounded-md inline-flex items-center">
+                                <LucideCheck className="inline mr-0.5" />
+                                OSI</span> :
+                              null
+                            }
+                          </div>
+                          <div className="text-xs text-fg-3">{licenses.name}</div>
+                        </button>
+                      }) : null
+                }
+              </div>
+            </div>
           }
-        </InputBlockMessage> */}
-
-          </InputBlockFooter>
-        </>
+        </div>
       }}
     />
   </div>
