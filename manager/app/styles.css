@@ -2,7 +2,7 @@
 
 @theme {
   --foreground: oklch(87.2% 0.01 258.338); /* gray-300 */
-  --background: oklch(21% 0.034 264.665); /* gray-900  */
+  --background: oklch(20.882% 0.02142 263.96); /* gray-900  */
   --accent: oklch(48.487% 0.29116 264.14); /* gray-500 */
   
   --success: oklch(69.6% 0.17 162.48);

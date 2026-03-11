@@ -564,6 +564,7 @@ function AddCollectionItemButton(props: { onClick: () => void, label: React.Reac
 
 
 
+
 function MaterialSymbolsAlternateEmail(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE */}<path fill="currentColor" d="M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12v1.45q0 1.475-1.012 2.513T18.5 17q-.875 0-1.65-.375t-1.3-1.075q-.725.725-1.638 1.088T12 17q-2.075 0-3.537-1.463T7 12t1.463-3.537T12 7t3.538 1.463T17 12v1.45q0 .65.425 1.1T18.5 15t1.075-.45t.425-1.1V12q0-3.35-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20h5v2zm0-7q1.25 0 2.125-.875T15 12t-.875-2.125T12 9t-2.125.875T9 12t.875 2.125T12 15" /></svg>) }
 function MingcuteAttachmentLine(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from MingCute Icon by MingCute Design - https://github.com/Richard9394/MingCute/blob/main/LICENSE */}<g fill="none" fillRule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z" /><path fill="currentColor" d="M18.71 17.565a4.25 4.25 0 0 0 0-6.01l-6.54-6.54A1 1 0 0 1 13.584 3.6l6.54 6.54a6.25 6.25 0 1 1-8.838 8.84l-7.954-7.955A4.501 4.501 0 0 1 9.698 4.66l7.953 7.953a2.752 2.752 0 0 1-3.892 3.891L6.513 9.257a1 1 0 0 1 1.414-1.415l7.247 7.247a.751.751 0 0 0 1.063-1.062L8.284 6.074A2.501 2.501 0 0 0 4.746 9.61l7.954 7.954a4.25 4.25 0 0 0 6.01 0Z" /></g></svg>) }
 
@@ -772,7 +773,6 @@ function ProjectAuthorInput() {
               setLabel="Set URL"
               error={typeof field.error === "object" ? field.error.url : undefined}
             />
-
           </div>
         }}
       />
@@ -780,6 +780,65 @@ function ProjectAuthorInput() {
   )
 }
 
+
+
+function CollectionInput<T extends any[] | undefined, E>(props: {
+  field: ReturnType<typeof useField<T, E>>,
+  addLabel?: React.ReactNode,
+  renderItem: (props: {
+    value: T extends any[] ? T[ number ] : never,
+    index: number,
+    ref: React.RefCallback<HTMLInputElement | null>,
+  }) => React.ReactNode,
+  defaultItem: () => T extends any[] ? T[ number ] : never,
+}) {
+  // - Implements auto-focus the last added item
+  // - Defines the default item structure for new entries
+  // - Style for Input Collection
+
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  return (
+    <div className="flex flex-col gap-2">
+      {props.field.value?.map((e, i) => {
+        return props.renderItem({
+          value: e, index: i, ref: (el) => {
+            inputRefs.current[ i ] = el
+            return () => { inputRefs.current[ i ] = null }
+          }
+        })
+      })}
+      <AddCollectionItemButton onClick={() => {
+        const currVal = (props.field.value ?? []) as T
+        if (!Array.isArray(currVal)) {
+          console.error("InputCollection field value is not an array")
+          return
+        }
+        props.field.setValue([
+          ...currVal,
+          props.defaultItem()
+        ] as T)
+        setTimeout(() => {
+          if (props.field.value) {
+            const lastIndex = props.field.value.length
+            inputRefs.current[ lastIndex ]?.focus()
+          }
+        }, 100)
+      }} label={props.addLabel ?? "Add Item"} />
+    </div>
+  )
+}
+function CollectionInputItemGroup(props: ComponentProps<"div"> & {
+  error: string | object | undefined,
+}) {
+  return <div {...props} className={cn("flex flex-col", props.className)}>
+    {props.children}
+    <SubInputFooter className="mb-1">
+      <ErrorMessage error={typeof props.error === "string" ? props.error : undefined} />
+    </SubInputFooter>
+    <CollectionSeparator />
+  </div>
+}
 
 
 
@@ -814,24 +873,29 @@ function ProjectContributorsInput() {
       label={"Contributors"}
       unsetLabel={"Add contributor"}
       {...field}
-      renderInput={() => {
-        return <div className="flex flex-col gap-2">
-          {field.value?.map((e, i) => {
-            const normalized = packageJsonParser.author.normalize(e) ?? { name: "" }
-            return <div className="flex flex-col" key={i}>
+      renderInput={(prop) => {
+        return <CollectionInput
+          field={field}
+          addLabel={"Add contributor"}
+          defaultItem={() => ({ name: "" })}
+          renderItem={({ index: i, value: e, ref }) => {
+            return <CollectionInputItemGroup key={i}
+              error={Array.isArray(field.error) && typeof field.error[ i ] !== "object" ? field.error[ i ] : undefined}
+            >
               <SubInput
                 Icon={LucideUser}
-                value={normalized.name}
+                value={e.name}
                 placeholder="Name"
                 onSetNotUndefined={() => { console.log("no-op/unreachable") }}
                 onSetUndefined={() => unsetUsername(i)}
                 inputOnChange={(ev) => subinputOnChange(i, "name", ev.target.value)}
                 setLabel="Set name"
                 error={Array.isArray(field.error) && typeof field.error[ i ] === "object" ? field.error[ i ].name : undefined}
+                inputRef={i === 0 ? prop.ref : (el) => ref?.(el)}
               />
               <SubInput
                 Icon={MaterialSymbolsAlternateEmail}
-                value={normalized.email}
+                value={e.email}
                 placeholder="Email"
                 onSetNotUndefined={() => addEmail(i)}
                 onSetUndefined={() => unsetEmail(i)}
@@ -841,7 +905,7 @@ function ProjectContributorsInput() {
               />
               <SubInput
                 Icon={MingcuteAttachmentLine}
-                value={normalized.url}
+                value={e.url}
                 placeholder="URL"
                 onSetNotUndefined={() => addUrl(i)}
                 onSetUndefined={() => unsetUrl(i)}
@@ -849,19 +913,12 @@ function ProjectContributorsInput() {
                 setLabel="Set URL"
                 error={Array.isArray(field.error) && typeof field.error[ i ] === "object" ? field.error[ i ].url : undefined}
               />
-              <SubInputFooter className="mb-1">
-                <ErrorMessage
-                  error={Array.isArray(field.error) && typeof field.error[ i ] !== "object" ? field.error[ i ] : undefined} />
-              </SubInputFooter>
-              <CollectionSeparator />
-            </div>
-          })}
-          <AddCollectionItemButton onClick={() => field.setValue([ ...(field.value ?? []), { name: "" } ])} label="Add contributor" />
-        </div>
+            </CollectionInputItemGroup>
+          }}
+        />
       }}
     />
   )
-
 }
 
 
@@ -907,7 +964,6 @@ function ProjectFundingInput() {
       [ "Other", "other", LucideExternalLink, "" ],
     ]
 
-  const inputsRefs = useRef<(HTMLInputElement | null)[]>([])
 
   return (
     <BasicField
@@ -921,17 +977,16 @@ function ProjectFundingInput() {
       unsetLabel={"Add funding"}
       description="Describes and notifies consumers of a package's monetary support information. This is used by the `npm fund` command to display a summary of where funding is needed in a project's dependency tree."
       renderInput={(prop) => {
-        return <div className="flex flex-col gap-2">
-          {field.value?.map((e, i) => {
-            return <div className="flex flex-col" key={i}>
+        return <CollectionInput
+          defaultItem={() => ({ url: "" })}
+          field={field}
+          addLabel={"Add funding"}
+          renderItem={({ index: i, ref, value: e }) => {
+            return <CollectionInputItemGroup key={i}
+              error={Array.isArray(field.error) && typeof field.error[ i ] !== "object" ? field.error[ i ] : undefined}
+            >
               <SubInput
-                inputRef={i === 0 ? prop.ref : (el) => {
-                  inputsRefs.current[ i ] = el
-                  if (field.value && i === field.value.length - 1) {
-                    setTimeout(() => { el?.focus() }, 100)
-                  }
-                  return () => { inputsRefs.current[ i ] = null }
-                }}
+                inputRef={i === 0 ? prop.ref : (el) => { return ref(el) }}
                 Icon={LucideLink}
                 value={e.url}
                 placeholder="URL"
@@ -967,15 +1022,9 @@ function ProjectFundingInput() {
                 }}
                 error={Array.isArray(field.error) ? typeof field.error[ i ] === "object" ? field.error[ i ].type : undefined : undefined}
               />
-              <SubInputFooter className="mb-1">
-                <ErrorMessage
-                  error={Array.isArray(field.error) && typeof field.error[ i ] !== "object" ? field.error[ i ] : undefined} />
-              </SubInputFooter>
-              <CollectionSeparator />
-            </div>
-          })}
-          <AddCollectionItemButton onClick={() => field.setValue([ ...(field.value ?? []), { url: "" } ])} label="Add funding" />
-        </div>
+            </CollectionInputItemGroup>
+          }}
+        />
       }}
     />
   )
