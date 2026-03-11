@@ -144,7 +144,7 @@ const BasicField = <T, E>({
   unsetLabel?: React.ReactNode,
   description?: React.ReactNode,
   renderInput?: (props: {
-    ref: React.Ref<HTMLInputElement>, // focusRef to focus on input element it when clicking on the input block
+    ref?: React.RefObject<HTMLInputElement | null>, // focusRef to focus on input element it when clicking on the input block
   }) => React.ReactNode,
   hideFooter?: boolean,
   placeholder?: string,
@@ -183,9 +183,7 @@ const BasicField = <T, E>({
       <ClearButton clearable={clearable} exists={exists} onClear={onClear} />
     </div>
     <InputBlock
-      onClick={() => inputRef.current?.focus()}
       className="group/block"
-
     >
       {showSetValueButton ?
         <SetValueButton onSetToNonUndefined={() => {
@@ -507,8 +505,10 @@ function SubInput<T extends string | number | readonly string[] | undefined>(pro
   setLabel: React.ReactNode,
   error?: string,
   renderUndefined?: () => React.ReactNode,
+  inputRef?: React.Ref<HTMLInputElement | null>,
 }) {
   const ref = useRef<HTMLInputElement>(null)
+  // const usedRef = props.inputRef ?? ref
   return (
     <div className="">
       <div className="flex gap-1 items-start px-2 -ml-1">
@@ -525,7 +525,19 @@ function SubInput<T extends string | number | readonly string[] | undefined>(pro
             </InputButton>)
           :
           <>
-            <Input ref={ref} className="" placeholder={props.placeholder} value={props.value} onChange={props.inputOnChange} />
+            <Input ref={(el) => {
+              ref.current = el
+              if (typeof props.inputRef === "function") {
+                return props.inputRef(el)
+              } else {
+                if (props.inputRef) {
+                  props.inputRef.current = el
+                }
+              }
+              return () => {
+                ref.current = null
+              }
+            }} className="" placeholder={props.placeholder} value={props.value} onChange={props.inputOnChange} />
             <CloseButton onClick={props.onSetUndefined} className="h-8 block text-base leading-5 " />
           </>
         }
@@ -584,9 +596,10 @@ function ProjectBugsInput() {
         newPackageJson.bugs = bugsUrl
         updatePackageJson(newPackageJson)
       }}
-      renderInput={() =>
+      renderInput={(props) =>
         <div className="flex flex-col">
           <SubInput
+            inputRef={props.ref}
             Icon={MingcuteAttachmentLine}
             value={url}
             placeholder="URL"
@@ -726,9 +739,10 @@ function ProjectAuthorInput() {
         }}
         label={"Author"}
         description="The author of the package."
-        renderInput={() => {
+        renderInput={(props) => {
           return <div className="flex flex-col">
             <SubInput
+              inputRef={props.ref}
               Icon={LucideUser}
               value={field.value?.name}
               placeholder="Name"
@@ -893,6 +907,7 @@ function ProjectFundingInput() {
       [ "Other", "other", LucideExternalLink, "" ],
     ]
 
+  const inputsRefs = useRef<(HTMLInputElement | null)[]>([])
 
   return (
     <BasicField
@@ -904,17 +919,24 @@ function ProjectFundingInput() {
         updatePackageJson(newPackageJson)
       }}
       unsetLabel={"Add funding"}
-      description="Describes and notifies consumers of a package's monetary support information."
-      renderInput={() => {
+      description="Describes and notifies consumers of a package's monetary support information. This is used by the `npm fund` command to display a summary of where funding is needed in a project's dependency tree."
+      renderInput={(prop) => {
         return <div className="flex flex-col gap-2">
           {field.value?.map((e, i) => {
             return <div className="flex flex-col" key={i}>
               <SubInput
+                inputRef={i === 0 ? prop.ref : (el) => {
+                  inputsRefs.current[ i ] = el
+                  if (field.value && i === field.value.length - 1) {
+                    setTimeout(() => { el?.focus() }, 100)
+                  }
+                  return () => { inputsRefs.current[ i ] = null }
+                }}
                 Icon={LucideLink}
                 value={e.url}
                 placeholder="URL"
                 onSetNotUndefined={() => field.setValue(field.value?.map((f, idx) => idx === i ? { url: "" } : f))}
-                onSetUndefined={() => field.setValue(field.value?.filter((_, idx) => idx !== i))}
+                onSetUndefined={() => field.value?.length === 1 ? field.setValue(undefined) : field.setValue(field.value?.filter((_, idx) => idx !== i))}
                 inputOnChange={(ev) => {
                   const value = ev.target.value
                   onURLChange(i, value)

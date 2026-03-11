@@ -39,7 +39,10 @@
   },
   "license": "MIT",
   "funding": [
-    "https://www.github.com/sponsors/alfonsusac"
+    {
+      "type": "github",
+      "url": "https://www.github.com/sponsors/alfonsusac"
+    }
   ],
   "homepage": "https://www.github.com"
 }
