@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type JSX, type KeyboardEvent, type SetStateAction } from "react"
+import React, { startTransition, useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type JSX, type KeyboardEvent, type SetStateAction } from "react"
 import { cn } from "lazy-cn"
 import { useAsync } from "../../lib/react-async"
 import type { MaybePromise } from "bun"
@@ -27,6 +27,7 @@ export function ProjectSettings() {
     <ProjectURLInput />
     <ProjectBugsInput />
     <ProjectLicenseInput />
+    <ProjectFundingInput />
     <H2>People</H2>
     <ProjectAuthorInput />
     <ProjectContributorsInput />
@@ -84,10 +85,6 @@ const useField = <T, E>(initialData: T, opts:
   const error = errorRes.status === "ok" ? errorRes.result : undefined
   const warns = warnsRes.status === "ok" ? warnsRes.result : []
 
-  // const otherErrors: string[] = []
-  // if (errorRes.status === 'error') otherErrors.push(error ?? "Unknown Error validating the field")
-  // if (warnsRes.status === 'error') otherErrors.push(...warns)
-
   const saveable = isChanged && error === undefined
   const resettable = isChanged
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,6 +105,7 @@ const useField = <T, E>(initialData: T, opts:
     }
   }
   const onSetToNonUndefined = () => {
+    console.log("yeee")
     if (opts.clearable) {
       const newValue = opts.defaultData ? opts.defaultData() : undefined
       setValue(newValue as T)
@@ -117,9 +115,11 @@ const useField = <T, E>(initialData: T, opts:
   // Blur/Editing state
   const [ isFocus, setIsFocus ] = useState(false)
   const isEditing = isFocus || isChanged
-  // useEffect(() => {
-
-  // }, )
+  useEffect(() => {
+    if (isChanged) {
+      setIsFocus(true)
+    }
+  }, [ isChanged ])
 
   return {
     value, setValue, isChanged,
@@ -127,7 +127,6 @@ const useField = <T, E>(initialData: T, opts:
     saveable, onChange,
     resettable, reset, exists, clearable: opts.clearable, onClear,
     onSetToNonUndefined,
-    // otherErrors,
     isFocus, setIsFocus, isEditing
   } as const
 }
@@ -175,7 +174,8 @@ const BasicField = <T, E>({
 
   return <div
     onFocus={() => {
-      setIsFocus(true)
+      if (value === undefined) return
+      setIsFocus(true) // somehow doens't work when another button is clicked.
     }}
     onBlur={(e) => {
       if (!e.currentTarget.contains(e.relatedTarget))
@@ -833,4 +833,28 @@ function ProjectContributorsInput() {
     />
   )
 
+}
+
+function ProjectFundingInput() {
+  const [ packageJson, updatePackageJson ] = usePackageJson()
+
+  const field = useField(
+    packageJsonParser.funding.normalizeToClient(packageJson.funding), {
+    validate: (value) => packageJsonParser.funding.validate(value),
+    clearable: true,
+    defaultData: () => [],
+  }, [])
+
+  return (
+    <BasicField
+      {...field}
+      label={"Funding"}
+      onSave={(value) => {
+        const newPackageJson = { ...packageJson }
+        newPackageJson.funding = packageJsonParser.funding.normalizeToServer(value)
+        updatePackageJson(newPackageJson)
+      }}
+      description="Describes and notifies consumers of a package's monetary support information."
+    />
+  )
 }

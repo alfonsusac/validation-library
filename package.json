@@ -36,13 +36,8 @@
   "bugs": {
     "url": "https://www.github.com"
   },
-  "license": "MIT-0",
   "author": {
     "name": "Alfonsus"
   },
-  "contributors": [
-    {
-      "name": "Yee"
-    }
-  ]
+  "license": "MIT"
 }

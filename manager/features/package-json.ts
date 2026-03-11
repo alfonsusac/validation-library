@@ -23,6 +23,13 @@ export type PackageJson = {
   },
   contributors?: PackageJson[ 'author' ][],
   maintainers?: PackageJson[ 'author' ][],
+  funding?: string | {
+    type?: string,
+    url: string,
+  } | ({
+    type?: string,
+    url: string,
+  } | string)[]
 }
 
 

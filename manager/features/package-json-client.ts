@@ -18,5 +18,6 @@ export function usePackageJson(required: boolean = true) {
   }
   if (required && !packageJson)
     throw new Error("package.json is required but not available yet.")
+
   return [ packageJson, update ] as const
 }

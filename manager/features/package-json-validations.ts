@@ -224,20 +224,85 @@ export const packageJsonParser = {
       if (errors.every(e => typeof e === "undefined"))
         return
       return errors
-
-
-
-      // for (let i = 0; i < val.length; i++) {
-      //   const res = validatePerson(val[ i ], `contributor[${ i }]`)
-      //   if (typeof res === "string")
-      //     return `${ ordinalize(i + 1) } contributor is invalid`
-      // }
     },
-    // validateEach(val: unknown) {
-    //   return validatePerson(val, "contributor")
-    // },
-    isEqual(A: PackageJson[ 'contributors' ], B: PackageJson[ 'contributors' ]) {
+  },
+  funding: {
+    normalizeToServer(val: { type?: string, url: string }[] | undefined) {
+      // smallest format possible.
+      function strPath(str: string) {
+        return str.trim()
+      }
+      function objPath(obj: { type?: string, url: string }) {
+        if (obj.type === undefined) return strPath(obj.url)
+        return {
+          type: obj.type.trim(),
+          url: strPath(obj.url)
+        }
+      }
+      function arrPath(arr: ({ type?: string, url: string })[]) {
+        return arr.map(item => {
+          return objPath(item)
+        })
+      }
+      if (typeof val === "undefined") return val
+      if (typeof val === "string") return strPath(val)
+      if (Array.isArray(val)) return arrPath(val)
+      if (typeof val === "object" && val !== null) return objPath(val)
+      return val
+    },
+    normalizeToClient(val: PackageJson[ 'funding' ]) {
+      if (typeof val === "string") return [ { url: val } ]
+      if (typeof val === "object" && !Array.isArray(val)) return [ val ]
+      if (Array.isArray(val)) {
+        return val.map(item => {
+          if (typeof item === "string") {
+            return { url: item }
+          } else if (typeof item === "object" && item !== null) {
+            return item
+          }
+          return undefined
+        }).filter(item => item !== undefined) as { type?: string, url: string }[]
+      }
+    },
+    validate: (value: unknown) => {
+      if (typeof value === "undefined") return
 
+      function strPath(value: string) {
+        if (value.trim() === "" || value === undefined)
+          return "funding URL cannot be empty"
+        if (!validUrl(value))
+          return "funding URL must be a valid URL"
+      }
+      function objPath(value: object) {
+        if ("type" in value && value.type !== undefined && typeof value.type !== 'string')
+          return "funding type must be a string"
+        if ("url" in value === false)
+          return "funding object must have a url property"
+        if ("url" in value) {
+          if (typeof value.url !== "string")
+            return "funding URL must be a string"
+          return strPath(value.url)
+        }
+      }
+      function arrPath(value: Array<unknown>) {
+        const errors = value.map((item, index) => {
+          if (typeof item === "string") {
+            return strPath(item)
+          } else if (typeof item === "object" && item !== null) {
+            return objPath(item)
+          } else {
+            return `funding[${ index }] must be a string or an object`
+          }
+        })
+        if (errors.every(e => typeof e === "undefined"))
+          return
+        return errors
+      }
+
+      if (typeof value === "string") return strPath(value)
+      if (Array.isArray(value)) return arrPath(value)
+      if (typeof value === "object" && value !== null) return objPath(value)
+      return "funding must be a string, an array, or an object, or omitted"
     }
   }
 }
