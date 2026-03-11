@@ -61,6 +61,7 @@ export function newQueryClient() {
     key: string,
     create: (
       clean: (c: () => void) => void,
+      update: (newData: T) => void
     ) => MaybePromise<T>,
   ) {
     const storeMapData = storeMap.get()
@@ -68,8 +69,13 @@ export function newQueryClient() {
       return storeMapData[ key ].store as Store<T>
     const cleanups: (() => void)[] = []
     const clean = (c: () => void) => { cleanups.push(c) }
+    const update = (newData: T) => {
+      const store = storeMapData[ key ]?.store
+      if (!store) throw new Error(`Store with key ${ key } not found. Can't update non-existing store.`)
+      store.update(newData)
+    }
     const store = newStore(() => {
-      const res = create(clean)
+      const res = create(clean, update)
       if (res instanceof Promise) {
         res.then(data => store.update(data))
         return undefined as unknown as T
@@ -131,6 +137,7 @@ export function useQuery<T, T2 = T>(
   key: string,
   create: (
     clean: (c: () => void) => void,
+    update: (newData: T) => void
   ) => MaybePromise<T>,
   selector: ((data: T) => T2) = ((data: T) => data as unknown as T2),
   required?: boolean // will throw error if true and data is not available yet

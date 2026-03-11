@@ -2,7 +2,7 @@ import { newQueryClient, QueryClientProvider } from "./lib/react-store"
 import { usePackageJson } from "./features/package-json-client"
 import { useUserSettings } from "./features/user-settings-client"
 import { ProjectSettings } from "./app/pages/ProjectSettings"
-import { navigate, RoutePage } from "./app/app-routes"
+import { navigate, RoutePage, useRouter } from "./app/app-routes"
 
 const qc = newQueryClient()
 import.meta.hot.dispose(() => qc.cleanup())
@@ -21,6 +21,7 @@ function App() {
 
   const [ packageJson ] = usePackageJson(false)
   const [ userSettings ] = useUserSettings()
+  const router = useRouter()
 
   return (
     <div className="p-4 relative h-screen w-screen max-w-xl overflow-x-hidden mx-auto">
@@ -36,12 +37,14 @@ function App() {
             <MenuItem
               title="package.json"
               description="Edit project settings."
-              onClick={() => navigate("/package-json")}
+              onClick={() => router.navigate("/package-json")}
+            // onClick={() => navigate("/package-json")}
             />
             <MenuItem
               title="test"
               description="Edit project settings."
-              onClick={() => navigate("/package-json")}
+              onClick={() => router.navigate("/package-json")}
+            // onClick={() => navigate("/package-json")}
             />
           </div>
         </div>
@@ -51,7 +54,8 @@ function App() {
         <div className="flex flex-col p-4 bg-bg">
           <SubpageHeader
             title="Project Settings"
-            onBackClick={() => navigate("/")}
+            onBackClick={() => router.navigate("/")}
+          // onBackClick={() => navigate("/")}
           />
           {(packageJson && userSettings) ? <ProjectSettings /> : null}
         </div>

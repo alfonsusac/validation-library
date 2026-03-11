@@ -2,7 +2,8 @@ import { cn } from "lazy-cn"
 import { useRef } from "react"
 import { useUserSettings } from "../features/user-settings-client"
 import { matchRoute } from "../lib/react-route"
-import { call } from "./app-client"
+import { call, useAppClient } from "./app-client"
+import { useQuery } from "../lib/react-store"
 
 export function RoutePage(props: {
   children: React.ReactNode, path: string, classNames?: {
@@ -11,16 +12,18 @@ export function RoutePage(props: {
     hidden?: string,
   }
 }) {
-  const [ userSettings ] = useUserSettings()
+  // const [ userSettings ] = useUserSettings()
+
+  const router = useRouter()
 
 
-  const currentRouteRef = useRef<string>(null)
-  const prevRouteRef = useRef<string>(null)
+  // const currentRouteRef = useRef<string>(null)
+  // const prevRouteRef = useRef<string>(null)
 
-  prevRouteRef.current = currentRouteRef.current || ""
-  currentRouteRef.current = userSettings?.route || ""
+  // prevRouteRef.current = currentRouteRef.current || ""
+  // currentRouteRef.current = userSettings?.route || ""
 
-  const isCurrentPath = matchRoute(userSettings?.route || "", props.path)
+  const isCurrentPath = matchRoute(router.current || "", props.path)
 
 
   return <div
@@ -39,4 +42,27 @@ export function RoutePage(props: {
 
 export async function navigate(path: string) {
   await call("updateUserSettings", { route: path })
+}
+
+
+
+export function useRouter() {
+  const [ router, updateRouter ] = useQuery("app_router", () => {
+    return {
+      current: "/",
+      history: [] as string[],
+    }
+  })
+
+  function navigate(path: string) {
+    updateRouter({
+      current: path,
+      history: [ ...router.history, router.current ],
+    })
+  }
+
+  return {
+    ...router,
+    navigate
+  }
 }
