@@ -12,27 +12,16 @@ export function RoutePage(props: {
     hidden?: string,
   }
 }) {
-  // const [ userSettings ] = useUserSettings()
-
   const router = useRouter()
-
-
-  // const currentRouteRef = useRef<string>(null)
-  // const prevRouteRef = useRef<string>(null)
-
-  // prevRouteRef.current = currentRouteRef.current || ""
-  // currentRouteRef.current = userSettings?.route || ""
-
   const isCurrentPath = matchRoute(router.current || "", props.path)
-
-
   return <div
     className={cn(
       "transition-discrete transition-all absolute inset-0 overflow-x-hidden overflow-y-auto",
-      isCurrentPath ? "" : "pointer-events-none",
-      isCurrentPath ? props.classNames?.shown : props.classNames?.hidden,
       "duration-300 starting:opacity-0",
+      "sm:static",
       props.classNames?.all,
+      isCurrentPath ? "" : "pointer-events-none",
+      isCurrentPath ? props.classNames?.shown : [ props.classNames?.hidden, "sm:translate-x-0 sm:opacity-0 sm:hidden sm:duration-0"],
     )}
     data-current={isCurrentPath ? "" : undefined}
   >

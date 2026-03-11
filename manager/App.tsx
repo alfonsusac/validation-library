@@ -24,39 +24,45 @@ function App() {
   const router = useRouter()
 
   return (
-    <div className="p-4 relative h-screen w-screen max-w-xl overflow-x-hidden mx-auto">
+    <div className="p-4 relative h-screen w-screen 
+    overflow-x-hidden mx-auto
+    ">
 
-      <RoutePage path="/" classNames={{ hidden: "-translate-x-1/5" }}>
-        <div className="flex flex-col p-4 bg-bg">
-          <header className="sticky top-0 -mt-4 -mx-4 p-6 bg-bg z-50">
-            <div className="font-semibold text-sm text-fg-3">Package Manager</div>
-            <h1 className="font-mono text-2xl break-all">{packageJson?.name}</h1>
-          </header>
+      <div className="max-w-xl w-full mx-auto">
+        <RoutePage path="/" classNames={{ hidden: "-translate-x-1/6" }}>
+          <div className="flex flex-col p-4 bg-bg">
+            <header className="gri-d sticky top-0 -mt-4 -mx-4 p-6 bg-bg z-50">
+              <div className="font-semibold text-sm text-fg-3">Package Manager</div>
+              <h1 className="font-mono text-2xl break-all">{packageJson?.name}</h1>
+            </header>
 
-          <div className="-mx-1 bg-bg-2/50 rounded-xl overflow-hidden">
-            <MenuItem
-              title="package.json"
-              description="Edit project settings."
-              onClick={() => router.navigate("/package-json")}
-            />
-            <MenuItem
-              title="test"
-              description="Edit project settings."
-              onClick={() => router.navigate("/package-json")}
-            />
+            <div className="-mx-1 bg-bg-2/50 rounded-xl overflow-hidden">
+              <MenuItem
+                title="package.json"
+                description="Edit project settings."
+                onClick={() => router.navigate("/package-json")}
+              />
+              <MenuItem
+                title="test"
+                description="Edit project settings."
+                onClick={() => router.navigate("/package-json")}
+              />
+            </div>
           </div>
-        </div>
-      </RoutePage>
+        </RoutePage>
 
-      <RoutePage path="/package-json" classNames={{ hidden: "translate-x-full" }}>
-        <div className="flex flex-col p-4 bg-bg">
-          <SubpageHeader
-            title="Project Settings"
-            onBackClick={() => router.navigate("/")}
-          />
-          {(packageJson && userSettings) ? <ProjectSettings /> : null}
-        </div>
-      </RoutePage>
+        <RoutePage path="/package-json" classNames={{ hidden: "translate-x-full" }}>
+          <div className="flex flex-col p-4 bg-bg">
+            <SubpageHeader
+              title="Project Settings"
+              onBackClick={() => router.navigate("/")}
+            />
+            {(packageJson && userSettings) ? <ProjectSettings /> : null}
+          </div>
+        </RoutePage>
+      </div>
+
+
 
     </div>
   )
@@ -82,9 +88,9 @@ function MenuItem(props: {
 }) {
   return <button
     onClick={props.onClick}
-    className="flex justify-between w-full p-3 px-3 hover:bg-bg-2/50 cursor-pointer active:hover:bg-bg-2/75">
+    className="flex justify-between w-full p-3 px-4 hover:bg-bg-2/50 cursor-pointer active:hover:bg-bg-2/75">
     <div className="flex flex-col gap-1 text-start">
-      <div>{props.title}</div>
+      <div className="font-medium">{props.title}</div>
       <div className="text-xs text-fg-3">
         {props.description}
       </div>
