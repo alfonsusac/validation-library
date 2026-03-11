@@ -29,8 +29,7 @@
     "tailwindcss": "^4.2.1"
   },
   "keywords": [
-    "react",
-    "rs"
+    "react"
   ],
   "homepage": "https://www.google.com",
   "bugs": {

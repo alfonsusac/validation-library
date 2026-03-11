@@ -35,8 +35,8 @@ export function ProjectSettings() {
 }
 
 const Label = (props: ComponentProps<"label">) => <label {...props} className={cn("text-xs text-fg-2 px-2 block", props.className)} />
-const InputBlock = (props: ComponentProps<"div">) => <div {...props} className={cn("bg-bg-2 p-1 flex flex-col rounded outline-fg-4 focus-within:outline-2 my-2", props.className)} />
-const InputBlockFooter = ({ expanded, ...props }: ComponentProps<"div"> & { expanded: boolean }) => <div {...props} className={cn("flex items-baseline gap-2 px-1", expanded ? "py-1" : "", props.className)} />
+const InputBlock = (props: ComponentProps<"div">) => <div {...props} className={cn("input-block bg-bg-2 p-1 flex flex-col rounded outline-fg-4 focus-within:outline-2 my-2", props.className)} />
+const InputBlockFooter = ({ expanded, ...props }: ComponentProps<"div"> & { expanded: boolean }) => <div {...props} className={cn("input-block-footer flex items-end gap-2 px-1", expanded ? "py-1" : "", props.className)} />
 const InputBlockMessage = (props: ComponentProps<"div">) => <div {...props} className={cn("text-xs text-fg-3 grow", props.className)} />
 const InputDescription = (props: ComponentProps<"div">) => <div {...props} className={cn("text-xs text-fg-4 hover:text-fg-2 px-2", props.className)} />
 const CloseButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost p-1 text-fg-4 hover:text-fg-3", props.className)}><LucideX /></button>
@@ -46,7 +46,7 @@ const WarnMessages = (props: { warns: string[] }) => <div className="text-warnin
 const SuccessMessage = (props: { children?: React.ReactNode }) => <div className="text-success">{props.children}</div>
 const LoadingMessage = (props: { children?: React.ReactNode }) => <div className="text-fg-3/75 italic">{props.children}</div>
 const Messages = (props: { messages: string[] }) => <div className="text-fg-3/75">{props.messages.map((msg, i) => <div key={i}>{msg}</div>)}</div>
-const Input = (props: ComponentProps<"input">) => <input {...props} className={cn("w-full text-fg rounded p-1.5 px-2 font-mono text-sm outline-none placeholder:text-fg-4 h-8", props.className)} />
+const Input = (props: ComponentProps<"input">) => <input {...props} className={cn("input w-full text-fg rounded p-1.5 px-2 font-mono text-sm outline-none placeholder:text-fg-4 h-8", props.className)} />
 const InputButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost text-start hover:bg-bg-3/50 flex items-center gap-1 px-2 py-1.5 grow", props.className)} />
 function LucidePlus(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7-7v14" /></svg>) }
 function LucideX(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 6L6 18M6 6l12 12" /></svg>) }
@@ -137,7 +137,6 @@ const BasicField = <T, E>({
   value, onChange, error, warns, saveable, onSave, resettable, reset, label,
   description, renderInput, hideFooter, placeholder, clearable, onClear, exists,
   isChanged, onSetToNonUndefined, isCheckingWarns, isValidating,
-  // otherErrors,
   resetValidate, resetWarns, setValue, extraMessages, isFocus, setIsFocus, isEditing, unsetLabel
 }: ReturnType<typeof useField<T, E>> & {
   onSave: (value: T) => void,
@@ -158,13 +157,9 @@ const BasicField = <T, E>({
   }
   const showSetValueButton = clearable && !exists
 
-
   const isInputBlockFooterExpanded =
     !!(error && typeof error === "string") || !!warns.length
-    // || !!otherErrors.length
-    || !!extraMessages
-    || resettable || !!isValidating || !!isCheckingWarns
-    || isChanged
+    || !!extraMessages || resettable || !!isValidating || !!isCheckingWarns || isChanged
 
   const inputProps = { value, onChange, ref: inputRef, placeholder, onKeyDown: onInputEnter }
 
@@ -201,7 +196,6 @@ const BasicField = <T, E>({
           <InputBlockMessage>
             <ErrorMessage error={error} />
             <WarnMessages warns={warns} />
-            {/* <Messages messages={otherErrors} /> */}
             {isValidating ? <LoadingMessage>Validating...</LoadingMessage> :
               isCheckingWarns && <LoadingMessage>Checking...</LoadingMessage>
             }
@@ -526,7 +520,7 @@ function SubInput<T extends string | number | readonly string[] | undefined>(pro
             </InputButton>)
           :
           <>
-            <Input ref={ref} className="" placeholder={props.placeholder} value={props.value} onChange={props.inputOnChange}/>
+            <Input ref={ref} className="" placeholder={props.placeholder} value={props.value} onChange={props.inputOnChange} />
             <CloseButton onClick={props.onSetUndefined} className="h-8 block text-base leading-5 " />
           </>
         }
@@ -537,6 +531,18 @@ function SubInput<T extends string | number | readonly string[] | undefined>(pro
 }
 function SubInputFooter(props: ComponentProps<"div">) {
   return <div {...props} className={cn("flex items-center gap-2 px-2 py-1 text-xs", props.className)} />
+}
+function CollectionSeparator(props: ComponentProps<"div">) {
+  return <div {...props} className={cn("border-t border-t-fg-4 mb-0 mx-1.5", props.className)} />
+}
+function AddCollectionItemButton(props: { onClick: () => void, label: React.ReactNode }) {
+  return <InputButton
+    className="mx-1 mb-1"
+    onClick={props.onClick}
+  >
+    <LucidePlus />
+    {props.label}
+  </InputButton>
 }
 
 
@@ -757,6 +763,7 @@ function ProjectAuthorInput() {
 
 
 
+
 function ProjectContributorsInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson()
 
@@ -827,15 +834,10 @@ function ProjectContributorsInput() {
                 <ErrorMessage
                   error={Array.isArray(field.error) && typeof field.error[ i ] !== "object" ? field.error[ i ] : undefined} />
               </SubInputFooter>
-              <div className="border-t border-t-fg-4 mb-1 mx-1.5" />
+              <CollectionSeparator />
             </div>
           })}
-          <InputButton
-            onClick={() => field.setValue([ ...(field.value ?? []), { name: "" } ])}
-          >
-            <LucidePlus />
-            Add Contributor
-          </InputButton>
+          <AddCollectionItemButton onClick={() => field.setValue([ ...(field.value ?? []), { name: "" } ])} label="Add contributor" />
         </div>
       }}
     />
@@ -942,17 +944,10 @@ function ProjectFundingInput() {
                 <ErrorMessage
                   error={Array.isArray(field.error) && typeof field.error[ i ] !== "object" ? field.error[ i ] : undefined} />
               </SubInputFooter>
-              <div className="border-t border-t-fg-4 mb-1 mx-1.5" />
+              <CollectionSeparator />
             </div>
           })}
-          <InputButton
-
-            className="mx-1"
-            onClick={() => field.setValue([ ...(field.value ?? []), { url: "" } ])}
-          >
-            <LucidePlus />
-            Add Funding
-          </InputButton>
+          <AddCollectionItemButton onClick={() => field.setValue([ ...(field.value ?? []), { url: "" } ])} label="Add funding" />
         </div>
       }}
     />
