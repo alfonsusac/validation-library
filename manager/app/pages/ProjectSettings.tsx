@@ -1,4 +1,4 @@
-import React, { startTransition, useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type JSX, type KeyboardEvent, type SetStateAction } from "react"
+import React, { startTransition, useEffect, useRef, useState, type ChangeEvent, type ComponentProps, type JSX, type KeyboardEvent, type SetStateAction, type SVGProps } from "react"
 import { cn } from "lazy-cn"
 import { useAsync } from "../../lib/react-async"
 import type { MaybePromise } from "bun"
@@ -46,8 +46,8 @@ const WarnMessages = (props: { warns: string[] }) => <div className="text-warnin
 const SuccessMessage = (props: { children?: React.ReactNode }) => <div className="text-success">{props.children}</div>
 const LoadingMessage = (props: { children?: React.ReactNode }) => <div className="text-fg-3/75 italic">{props.children}</div>
 const Messages = (props: { messages: string[] }) => <div className="text-fg-3/75">{props.messages.map((msg, i) => <div key={i}>{msg}</div>)}</div>
-const Input = (props: ComponentProps<"input">) => <input {...props} className={cn("w-full text-fg rounded p-1.5 px-2 font-mono text-sm outline-none placeholder:text-fg-4", props.className)} />
-const InputWideButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost text-start hover:bg-bg-3/50 flex items-center gap-1 px-2 py-1.5 grow", props.className)} />
+const Input = (props: ComponentProps<"input">) => <input {...props} className={cn("w-full text-fg rounded p-1.5 px-2 font-mono text-sm outline-none placeholder:text-fg-4 h-8", props.className)} />
+const InputButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost text-start hover:bg-bg-3/50 flex items-center gap-1 px-2 py-1.5 grow", props.className)} />
 function LucidePlus(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7-7v14" /></svg>) }
 function LucideX(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 6L6 18M6 6l12 12" /></svg>) }
 function LucideCheck(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 6L9 17l-5-5" /></svg>) }
@@ -168,9 +168,9 @@ const BasicField = <T, E>({
 
   const inputProps = { value, onChange, ref: inputRef, placeholder, onKeyDown: onInputEnter }
 
-  const SetValueButton = (props: { onSetToNonUndefined: () => void }) => <InputWideButton onClick={props.onSetToNonUndefined}><LucidePlus />
+  const SetValueButton = (props: { onSetToNonUndefined: () => void }) => <InputButton onClick={props.onSetToNonUndefined}><LucidePlus />
     {unsetLabel ?? "Set Value"}
-  </InputWideButton>
+  </InputButton>
 
   return <div
     onFocus={() => {
@@ -507,19 +507,27 @@ function SubInput<T extends string | number | readonly string[] | undefined>(pro
   inputOnChange: (e: ChangeEvent<HTMLInputElement>) => void,
   setLabel: React.ReactNode,
   error?: string,
+  renderUndefined?: () => React.ReactNode,
 }) {
+  const ref = useRef<HTMLInputElement>(null)
   return (
     <div className="">
-      <div className="flex gap-1 items-center px-2 -ml-1">
-        <props.Icon className="text-fg-4 text-lg shrink-0 w-5 h-5" />
+      <div className="flex gap-1 items-start px-2 -ml-1">
+        <props.Icon className="text-fg-4 text-lg shrink-0 w-5 h-8 " />
         {props.value === undefined ?
-          <InputWideButton onClick={props.onSetNotUndefined} className="-mr-2">
-            <LucidePlus />{props.setLabel}
-          </InputWideButton>
+          (props.renderUndefined?.() ??
+            <InputButton onClick={() => {
+              props.onSetNotUndefined()
+              setTimeout(() => {
+                ref.current?.focus()
+              }, 0)
+            }} className="-mr-2">
+              <LucidePlus />{props.setLabel}
+            </InputButton>)
           :
           <>
-            <Input className="" placeholder={props.placeholder} value={props.value} onChange={props.inputOnChange} />
-            <CloseButton onClick={props.onSetUndefined} />
+            <Input ref={ref} className="" placeholder={props.placeholder} value={props.value} onChange={props.inputOnChange}/>
+            <CloseButton onClick={props.onSetUndefined} className="h-8 block text-base leading-5 " />
           </>
         }
       </div>
@@ -822,18 +830,26 @@ function ProjectContributorsInput() {
               <div className="border-t border-t-fg-4 mb-1 mx-1.5" />
             </div>
           })}
-          <InputWideButton
+          <InputButton
             onClick={() => field.setValue([ ...(field.value ?? []), { name: "" } ])}
           >
             <LucidePlus />
             Add Contributor
-          </InputWideButton>
+          </InputButton>
         </div>
       }}
     />
   )
 
 }
+
+
+export function LucideLink(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></g></svg>) }
+export function LucideExternalLink(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 3h6v6m-11 5L21 3m-3 10v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></svg>) }
+export function CibGithub(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 32 32" {...props}>{/* Icon from CoreUI Brands by creativeLabs Łukasz Holeczek - https://creativecommons.org/publicdomain/zero/1.0/ */}<path fill="currentColor" d="M16 .396c-8.839 0-16 7.167-16 16c0 7.073 4.584 13.068 10.937 15.183c.803.151 1.093-.344 1.093-.772c0-.38-.009-1.385-.015-2.719c-4.453.964-5.391-2.151-5.391-2.151c-.729-1.844-1.781-2.339-1.781-2.339c-1.448-.989.115-.968.115-.968c1.604.109 2.448 1.645 2.448 1.645c1.427 2.448 3.744 1.74 4.661 1.328c.14-1.031.557-1.74 1.011-2.135c-3.552-.401-7.287-1.776-7.287-7.907c0-1.751.62-3.177 1.645-4.297c-.177-.401-.719-2.031.141-4.235c0 0 1.339-.427 4.4 1.641a15.4 15.4 0 0 1 4-.541c1.36.009 2.719.187 4 .541c3.043-2.068 4.381-1.641 4.381-1.641c.859 2.204.317 3.833.161 4.235c1.015 1.12 1.635 2.547 1.635 4.297c0 6.145-3.74 7.5-7.296 7.891c.556.479 1.077 1.464 1.077 2.959c0 2.14-.02 3.864-.02 4.385c0 .416.28.916 1.104.755c6.4-2.093 10.979-8.093 10.979-15.156c0-8.833-7.161-16-16-16z" /></svg>) }
+export function CibPatreon(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 32 32" {...props}>{/* Icon from CoreUI Brands by creativeLabs Łukasz Holeczek - https://creativecommons.org/publicdomain/zero/1.0/ */}<path fill="currentColor" d="M20.516.697c-6.355 0-11.521 5.167-11.521 11.521c0 6.333 5.167 11.484 11.521 11.484C26.849 23.702 32 18.551 32 12.218C32 5.863 26.849.697 20.516.697M.005 31.38H5.63V.697H.005z" /></svg>) }
+export function CibOpenCollective(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 32 32" {...props}>{/* Icon from CoreUI Brands by creativeLabs Łukasz Holeczek - https://creativecommons.org/publicdomain/zero/1.0/ */}<path fill="currentColor" d="M29.145 6.896a15.9 15.9 0 0 1 0 18.208l-4.129-4.131a10.27 10.27 0 0 0 0-9.947zm-4.041-4.041l-4.131 4.129a10.28 10.28 0 0 0-15.234 9.01c0 3.636 1.916 7 5.047 8.849s7 1.905 10.187.156l4.131 4.145c-4.891 3.391-11.26 3.781-16.531 1.021S-.006 21.941-.006 15.993A16.02 16.02 0 0 1 8.573 1.816a16.01 16.01 0 0 1 16.531 1.021zm4.041 4.041a15.9 15.9 0 0 1 0 18.208l-4.129-4.131a10.27 10.27 0 0 0 0-9.947z" /></svg>) }
+export function CibKoFi(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 32 32" {...props}>{/* Icon from CoreUI Brands by creativeLabs Łukasz Holeczek - https://creativecommons.org/publicdomain/zero/1.0/ */}<path fill="currentColor" d="M31.844 11.932c-1.032-5.448-6.48-6.125-6.48-6.125H.964C.156 5.807.057 6.87.057 6.87S-.052 16.637.03 22.637c.22 3.228 3.448 3.561 3.448 3.561s11.021-.031 15.953-.067c3.251-.568 3.579-3.423 3.541-4.98c5.808.323 9.896-3.776 8.871-9.219zm-14.751 4.683c-1.661 1.932-5.348 5.297-5.348 5.297s-.161.161-.417.031c-.099-.073-.14-.12-.14-.12c-.595-.588-4.491-4.063-5.381-5.271c-.943-1.287-1.385-3.599-.119-4.948c1.265-1.344 4.005-1.448 5.817.541c0 0 2.083-2.375 4.625-1.281c2.536 1.095 2.443 4.016.963 5.751m8.23.636c-1.24.156-2.244.036-2.244.036V9.714h2.359s2.631.735 2.631 3.516c0 2.552-1.313 3.557-2.745 4.021z" /></svg>) }
 
 function ProjectFundingInput() {
   const [ packageJson, updatePackageJson ] = usePackageJson()
@@ -842,8 +858,34 @@ function ProjectFundingInput() {
     packageJsonParser.funding.normalizeToClient(packageJson.funding), {
     validate: (value) => packageJsonParser.funding.validate(value),
     clearable: true,
-    defaultData: () => [],
+    defaultData: () => [ { url: "" } ],
   }, [])
+
+  const commonTypeMap = packageJsonParser.funding.commonTypeMap
+  const subinputOnChange = (i: number, value: { url?: string, type?: string }) => {
+    field.setValue(field.value?.map((c, idx) => idx === i ? { ...c, ...value } : c))
+  }
+  const onURLChange = (i: number, url: string) => {
+    const matchedType = Object.entries(commonTypeMap).find(([ k, v ]) => url.includes(v.match))
+    if (matchedType) {
+      return subinputOnChange(i, { url, type: matchedType[ 0 ] })
+    }
+    return subinputOnChange(i, { url })
+  }
+
+  const SetTypeButtons: [
+    label: string,
+    type: string,
+    Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>,
+    defaultUrl: string,
+  ][] = [
+      [ "GitHub", "github", CibGithub, commonTypeMap[ 'github' ].defaultUrl ],
+      [ "Open Collective", "open collective", CibOpenCollective, commonTypeMap[ 'open collective' ].defaultUrl ],
+      [ "Patreon", "patreon", CibPatreon, commonTypeMap[ 'patreon' ].defaultUrl ],
+      [ "Ko-fi", "ko-fi", CibKoFi, commonTypeMap[ 'ko-fi' ].defaultUrl ],
+      [ "Other", "other", LucideExternalLink, "" ],
+    ]
+
 
   return (
     <BasicField
@@ -854,7 +896,65 @@ function ProjectFundingInput() {
         newPackageJson.funding = packageJsonParser.funding.normalizeToServer(value)
         updatePackageJson(newPackageJson)
       }}
+      unsetLabel={"Add funding"}
       description="Describes and notifies consumers of a package's monetary support information."
+      renderInput={() => {
+        return <div className="flex flex-col gap-2">
+          {field.value?.map((e, i) => {
+            return <div className="flex flex-col" key={i}>
+              <SubInput
+                Icon={LucideLink}
+                value={e.url}
+                placeholder="URL"
+                onSetNotUndefined={() => field.setValue(field.value?.map((f, idx) => idx === i ? { url: "" } : f))}
+                onSetUndefined={() => field.setValue(field.value?.filter((_, idx) => idx !== i))}
+                inputOnChange={(ev) => {
+                  const value = ev.target.value
+                  onURLChange(i, value)
+                }}
+                setLabel="Set URL"
+                error={Array.isArray(field.error) ? typeof field.error[ i ] === "object" ? field.error[ i ].url : undefined : undefined}
+              />
+              <SubInput
+                Icon={LucideExternalLink}
+                value={e.type}
+                placeholder="Type"
+                onSetNotUndefined={() => subinputOnChange(i, { type: "" })}
+                onSetUndefined={() => subinputOnChange(i, { type: undefined })}
+                inputOnChange={(ev) => subinputOnChange(i, { type: ev.target.value })}
+                setLabel="Set Type"
+                renderUndefined={() => {
+                  return <div className="flex flex-wrap items-center">
+                    <span className="text-fg-2 text-sm ml-2">
+                      Set Type:
+                    </span>
+                    {SetTypeButtons.map(([ label, type, Icon, defaultUrl ]) => (
+                      <InputButton key={type} className="grow-0 h-8" onClick={() => { subinputOnChange(i, { type, url: defaultUrl }) }}>
+                        <Icon />
+                        {label}
+                      </InputButton>
+                    ))}
+                  </div>
+                }}
+                error={Array.isArray(field.error) ? typeof field.error[ i ] === "object" ? field.error[ i ].type : undefined : undefined}
+              />
+              <SubInputFooter className="mb-1">
+                <ErrorMessage
+                  error={Array.isArray(field.error) && typeof field.error[ i ] !== "object" ? field.error[ i ] : undefined} />
+              </SubInputFooter>
+              <div className="border-t border-t-fg-4 mb-1 mx-1.5" />
+            </div>
+          })}
+          <InputButton
+
+            className="mx-1"
+            onClick={() => field.setValue([ ...(field.value ?? []), { url: "" } ])}
+          >
+            <LucidePlus />
+            Add Funding
+          </InputButton>
+        </div>
+      }}
     />
   )
 }

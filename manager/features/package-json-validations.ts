@@ -267,22 +267,30 @@ export const packageJsonParser = {
     validate: (value: unknown) => {
       if (typeof value === "undefined") return
 
-      function strPath(value: string) {
+      function strPath(value: unknown) {
+        if (typeof value !== "string")
+          return "URL must be a string"
         if (value.trim() === "" || value === undefined)
-          return "funding URL cannot be empty"
+          return "URL cannot be empty"
         if (!validUrl(value))
-          return "funding URL must be a valid URL"
+          return "URL must be a valid URL"
+        const matchinType = Object.entries(packageJsonParser.funding.commonTypeMap).find(([_, v]) => value.includes(v.match))
+        if (matchinType)
+          return matchinType[1].validate(value)
       }
       function objPath(value: object) {
-        if ("type" in value && value.type !== undefined && typeof value.type !== 'string')
-          return "funding type must be a string"
         if ("url" in value === false)
           return "funding object must have a url property"
-        if ("url" in value) {
-          if (typeof value.url !== "string")
-            return "funding URL must be a string"
-          return strPath(value.url)
+        const errors = {
+          url: strPath(value.url),
+          type: (() => {
+            if ("type" in value && value.type !== undefined && typeof value.type !== 'string')
+              return "funding type must be a string"
+          })()
         }
+        if (errors.url === undefined && errors.type === undefined)
+          return
+        return errors
       }
       function arrPath(value: Array<unknown>) {
         const errors = value.map((item, index) => {
@@ -303,7 +311,56 @@ export const packageJsonParser = {
       if (Array.isArray(value)) return arrPath(value)
       if (typeof value === "object" && value !== null) return objPath(value)
       return "funding must be a string, an array, or an object, or omitted"
-    }
+    },
+    commonTypes: [ "github", "patreon", "open collective", "ko-fi" ],
+    commonTypeMap: {
+      github: {
+        match: "github.com", defaultUrl: "https://www.github.com/sponsors/<user>",
+        validate: (i: string) => {
+          if (i.includes("github.com") === false) return // not a github link
+          if (i.split("github.com")[ 1 ].startsWith("/sponsors/") === false)
+            return "Valid github sponsor link is https://www.github.com/sponsors/<user>"
+          if (i.split("github.com/sponsors/")[ 1 ].length === 0)
+            return "GitHub sponsor username cannot be empty"
+          if (i.includes("<user>"))
+            return "Please replace <user> with your GitHub username in the URL"
+        }
+      },
+      patreon: {
+        match: "patreon.com", defaultUrl: "https://www.patreon.com/<user>",
+        validate: (i) => {
+          if (i.includes("patreon.com") === false) return // not a patreon link
+          if (i.split("patreon.com/")[ 1 ].length === 0)
+            return "Patreon username cannot be empty"
+          if (i.includes("<user>"))
+            return "Please replace <user> with your Patreon username in the URL"
+        }
+      },
+      "open collective": {
+        match: "opencollective.com", defaultUrl: "https://opencollective.com/<project>",
+        validate: (i) => {
+          if (i.includes("opencollective.com") === false) return // not an open collective link
+          if (i.split("opencollective.com/")[ 1 ].length === 0)
+            return "Open Collective Project name cannot be empty"
+          if (i.includes("<project>"))
+            return "Please replace <project> with your Open Collective project name in the URL"
+        }
+      },
+      "ko-fi": {
+        match: "ko-fi.com", defaultUrl: "https://ko-fi.com/<user>",
+        validate: (i) => {
+          if (i.includes("ko-fi.com") === false) return // not a ko-fi link
+          if (i.split("ko-fi.com/")[ 1 ].length === 0)
+            return "Ko-fi username cannot be empty"
+          if (i.includes("<user>"))
+            return "Please replace <user> with your Ko-fi username in the URL"
+        }
+      }
+    } satisfies Record<string, {
+      match: string,
+      defaultUrl: string,
+      validate: (i: string) => string | undefined
+    }>
   }
 }
 
