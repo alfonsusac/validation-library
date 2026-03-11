@@ -4,10 +4,18 @@
   --foreground: oklch(87.2% 0.01 258.338); /* gray-300 */
   --background: oklch(20.882% 0.02142 263.96); /* gray-900  */
   --accent: oklch(48.487% 0.29116 264.14); /* gray-500 */
-  
+
   --success: oklch(69.6% 0.17 162.48);
   --error: oklch(71.2% 0.194 13.428);
   --warning: oklch(87.9% 0.169 91.605);
+
+    /* Light mode */
+  /* --foreground: oklch(30.217% 0.08622 262.192);
+  --background: oklch(100% 0.00011 271.152);
+  --success: oklch(55.717% 0.14303 150.553);
+  --error: oklch(71.2% 0.194 13.428);
+  --warning: oklch(87.9% 0.169 91.605); */
+  
 
   --color-fg: var(--foreground);
   --color-fg-2: color-mix(in oklch, color-mix(in oklch, var(--foreground) 75%, var(--background)) 95%, var(--accent));

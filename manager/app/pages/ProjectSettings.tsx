@@ -138,12 +138,12 @@ const BasicField = <T, E>({
   value, onChange, error, warns, saveable, onSave, resettable, reset, label,
   description, renderInput, hideFooter, placeholder, clearable, onClear, exists,
   isChanged, onSetToNonUndefined, isCheckingWarns, isValidating,
-  resetValidate, resetWarns, setValue, extraMessages, isFocus, setIsFocus, isEditing, unsetLabel,
+  resetValidate, resetWarns, setValue, extraMessages, isFocus, setIsFocus, isEditing, setLabel,
   classNames
 }: ReturnType<typeof useField<T, E>> & {
   onSave: (value: T) => void,
   label: React.ReactNode,
-  unsetLabel?: React.ReactNode,
+  setLabel: React.ReactNode,
   description?: React.ReactNode,
   renderInput?: (props: {
     ref?: React.RefObject<HTMLInputElement | null>, // focusRef to focus on input element it when clicking on the input block
@@ -175,8 +175,15 @@ const BasicField = <T, E>({
 
   const inputProps = { value, onChange, ref: inputRef, placeholder, onKeyDown: onInputEnter }
 
-  const SetValueButton = (props: { onSetToNonUndefined: () => void }) => <InputButton onClick={props.onSetToNonUndefined}><LucidePlus />
-    {unsetLabel ?? "Set Value"}
+  const SetValueButton = (props: { onSetToNonUndefined: () => void }) => <InputButton
+    className="p-2.5 items-start"
+    onClick={props.onSetToNonUndefined}><LucidePlus className="shrink-0 h-[1lh]" />
+    <div className="flex flex-col">
+      {setLabel ?? "Set Value"}
+      <div className="text-xs opacity-75 text-pretty">
+        {description}
+      </div>
+    </div>
   </InputButton>
 
   return <div
@@ -189,21 +196,27 @@ const BasicField = <T, E>({
         setIsFocus(false)
     }}
     tabIndex={0}
+    className={value===undefined ? "-my-3" : ""}
   >
-    <div className={cn("flex", classNames?.label)}>
-      <Label className="grow">{label}</Label>
-      <ClearButton clearable={clearable} exists={exists} onClear={onClear} />
-    </div>
+    {value !== undefined &&
+      <div className={cn("label flex", classNames?.label)}>
+        <Label className="grow">{label}</Label>
+        <ClearButton clearable={clearable} exists={exists} onClear={onClear} />
+      </div>
+    }
     <InputBlock
-      className={cn("group/block", classNames?.inputBlock)}
+      className={cn("group/block",
+        value === undefined ? "bg-transparent p-0" : "",
+        classNames?.inputBlock,)}
     >
       {showSetValueButton ?
-        <SetValueButton onSetToNonUndefined={() => {
-          onSetToNonUndefined()
-          setTimeout(() => {
-            inputRef.current?.focus()
-          }, 0)
-        }} />
+        <SetValueButton
+          onSetToNonUndefined={() => {
+            onSetToNonUndefined()
+            setTimeout(() => {
+              inputRef.current?.focus()
+            }, 0)
+          }} />
         : renderInput?.(inputProps)
         ?? <Input {...inputProps} value={String(value)} className={classNames?.input} />}
       {hideFooter ? null :
@@ -241,7 +254,7 @@ const BasicField = <T, E>({
     </InputBlock>
     {
       // isEditing &&
-      true &&
+      value !== undefined &&
       <InputDescription className={cn(classNames?.inputDescription)}>
         {description}
       </InputDescription>
@@ -272,9 +285,10 @@ function Switch(props: {
         props.isOn ? [ "bg-slate-600", props.classNames?.switchOn ] : [ '', props.classNames?.switchOff ],
         props.classNames?.switch
       )}>
-        <div className={cn("rounded-full bg-fg-3 w-3 h-3 relative transition-[background,left]",
-          props.isOn ? [ "bg-slate-200 left-3", props.classNames?.thumbOn ] : [ "left-0", props.classNames?.thumbOff ],
-          props.classNames?.thumb
+        <div className={cn("thumb rounded-full bg-fg-3 w-3 h-3 relative transition-[background,left]",
+          props.isOn ? [ " left-3", props.classNames?.thumbOn ] : [ "left-0", props.classNames?.thumbOff ],
+          props.classNames?.thumb,
+          'bg-slate-400',
         )} />
       </div>
       <div className={cn("text-fg-2 group-hover:text-fg select-none",
@@ -317,6 +331,7 @@ function ProjectNameInput() {
   return <div>
     <BasicField
       {...field}
+      setLabel="Set Name"
       label="Name"
       onSave={(newName) => {
         const newPackageJson = { ...packageJson }
@@ -357,6 +372,7 @@ function ProjectVersionInput() {
   return <div>
     <BasicField
       {...field}
+      setLabel="Set Version"
       label="Version"
       onSave={(newVersion) => {
         const newPackageJson = { ...packageJson }
@@ -381,6 +397,7 @@ function ProjectDescriptionInput() {
   return <div>
     <BasicField
       {...field}
+      setLabel="Set Description"
       label="Description"
       onSave={(newDescription) => {
         const newPackageJson = { ...packageJson }
@@ -388,7 +405,7 @@ function ProjectDescriptionInput() {
         updatePackageJson(newPackageJson)
       }}
       description="A brief description of the package. Helps people discover your 
-      package, as it's listed in `npm search`."
+      package, as it's listed in 'npm search'."
     />
   </div>
 }
@@ -496,6 +513,7 @@ function ProjectKeywordsInput() {
   return <div>
     <BasicField
       {...field}
+      setLabel="Set Keywords"
       label="Keywords"
       onSave={(newKeywords) => {
         const newPackageJson = { ...packageJson }
@@ -526,6 +544,7 @@ function ProjectURLInput() {
   return <div>
     <BasicField
       {...field}
+      setLabel="Set Homepage URL"
       label="Homepage URL"
       placeholder="https://github.com/npm/example#readme"
       onSave={(newKeywords) => {
@@ -635,6 +654,7 @@ function ProjectBugsInput() {
   return <div>
     <BasicField
       {...field}
+      setLabel="Set Bugs URL/Email"
       label="Bugs URL"
       onSave={(bugsUrl) => {
         const newPackageJson = { ...packageJson }
@@ -702,6 +722,7 @@ function ProjectLicenseInput() {
   return <div>
     <BasicField
       {...field}
+      setLabel="Set License"
       label="License"
       onSave={(licensesText) => {
         const newPackageJson = { ...packageJson }
@@ -777,6 +798,7 @@ function ProjectAuthorInput() {
     <div>
       <BasicField
         {...field}
+        setLabel="Set Author"
         onSave={(author) => {
           const newPackageJson = { ...packageJson }
           newPackageJson.author = author
@@ -915,7 +937,7 @@ function ProjectContributorsInput() {
         updatePackageJson({ ...packageJson, contributors: value })
       }}
       label={"Contributors"}
-      unsetLabel={"Add contributor"}
+      setLabel={"Add contributor"}
       {...field}
       renderInput={(prop) => {
         return <CollectionInput
@@ -1018,7 +1040,7 @@ function ProjectFundingInput() {
         newPackageJson.funding = packageJsonParser.funding.normalizeToServer(value)
         updatePackageJson(newPackageJson)
       }}
-      unsetLabel={"Add funding"}
+      setLabel={"Add funding"}
       description="Describes and notifies consumers of a package's monetary support information. This is used by the `npm fund` command to display a summary of where funding is needed in a project's dependency tree."
       renderInput={(prop) => {
         return <CollectionInput
@@ -1092,6 +1114,7 @@ function ProjectPrivateInput() {
   return (
     <BasicField
       {...field}
+      setLabel="Set Visibility"
       classNames={{
         // inputBlock: "bg-transparent py-0"
       }}
@@ -1103,7 +1126,7 @@ function ProjectPrivateInput() {
       }}
       description="If true, prevents the package from being accidentally published to the npm registry."
       renderInput={() => {
-        return <div className="flex items-center gap-1">
+        return <div className="flex items-center gap-1 p-1">
           {[ false, true ].map((isPrivate, i) => {
             const selected = field.value === isPrivate
             return (
@@ -1130,6 +1153,7 @@ function ProjectPrivateInput() {
               field.value ? "Private (not published to npm)" : "Public (published to npm)"
             }</div>}
             classNames={{
+              root: "ml-1 my-1",
               switch: "h-6 w-10 rounded-xl",
               switchOff: "bg-bg-3",
               label: "ml-1",
