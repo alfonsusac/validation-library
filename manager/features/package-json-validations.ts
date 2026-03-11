@@ -361,6 +361,13 @@ export const packageJsonParser = {
       defaultUrl: string,
       validate: (i: string) => string | undefined
     }>
+  },
+  private: {
+    validate: (value: unknown) => {
+      if (typeof value === "undefined") return
+      if (typeof value !== "boolean")
+        return "private must be a boolean"
+    }
   }
 }
 

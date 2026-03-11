@@ -23,6 +23,7 @@ export function ProjectSettings() {
     <ProjectNameInput />
     <ProjectVersionInput />
     <ProjectDescriptionInput />
+    <ProjectPrivateInput />
     <ProjectKeywordsInput />
     <ProjectURLInput />
     <ProjectBugsInput />
@@ -137,7 +138,8 @@ const BasicField = <T, E>({
   value, onChange, error, warns, saveable, onSave, resettable, reset, label,
   description, renderInput, hideFooter, placeholder, clearable, onClear, exists,
   isChanged, onSetToNonUndefined, isCheckingWarns, isValidating,
-  resetValidate, resetWarns, setValue, extraMessages, isFocus, setIsFocus, isEditing, unsetLabel
+  resetValidate, resetWarns, setValue, extraMessages, isFocus, setIsFocus, isEditing, unsetLabel,
+  classNames
 }: ReturnType<typeof useField<T, E>> & {
   onSave: (value: T) => void,
   label: React.ReactNode,
@@ -149,6 +151,16 @@ const BasicField = <T, E>({
   hideFooter?: boolean,
   placeholder?: string,
   extraMessages?: React.ReactNode,
+  classNames?: {
+    root?: string,
+    label?: string,
+    inputBlock?: string,
+    input?: string,
+    inputButton?: string,
+    inputBlockFooter?: string,
+    inputBlockMessage?: string,
+    inputDescription?: string,
+  }
 }) => {
   const inputRef = useRef<HTMLInputElement>(null)
   const onInputEnter = (e: KeyboardEvent) => {
@@ -178,12 +190,12 @@ const BasicField = <T, E>({
     }}
     tabIndex={0}
   >
-    <div className="flex">
+    <div className={cn("flex", classNames?.label)}>
       <Label className="grow">{label}</Label>
       <ClearButton clearable={clearable} exists={exists} onClear={onClear} />
     </div>
     <InputBlock
-      className="group/block"
+      className={cn("group/block", classNames?.inputBlock)}
     >
       {showSetValueButton ?
         <SetValueButton onSetToNonUndefined={() => {
@@ -193,10 +205,13 @@ const BasicField = <T, E>({
           }, 0)
         }} />
         : renderInput?.(inputProps)
-        ?? <Input {...inputProps} value={String(value)} />}
+        ?? <Input {...inputProps} value={String(value)} className={classNames?.input} />}
       {hideFooter ? null :
-        <InputBlockFooter expanded={isInputBlockFooterExpanded}>
-          <InputBlockMessage>
+        <InputBlockFooter
+          expanded={isInputBlockFooterExpanded}
+          className={cn(classNames?.inputBlockFooter)}
+        >
+          <InputBlockMessage className={cn(classNames?.inputBlockMessage)}>
             <ErrorMessage error={error} />
             <WarnMessages warns={warns} />
             {isValidating ? <LoadingMessage>Validating...</LoadingMessage> :
@@ -206,7 +221,7 @@ const BasicField = <T, E>({
           </InputBlockMessage>
           {resettable && <button
             disabled={!resettable}
-            className="button text-xs ghost" onClick={() => {
+            className={cn("button text-xs ghost", classNames?.inputButton)} onClick={() => {
               setIsFocus(false)
               reset()
             }}>
@@ -214,7 +229,8 @@ const BasicField = <T, E>({
           </button>}
           {isChanged && <button
             disabled={!saveable}
-            className="button text-xs" onClick={() => {
+            className={cn("button text-xs", classNames?.inputButton)}
+            onClick={() => {
               onSave(value)
               setIsFocus(false)
             }}>
@@ -226,11 +242,48 @@ const BasicField = <T, E>({
     {
       // isEditing &&
       true &&
-      <InputDescription>
+      <InputDescription className={cn(classNames?.inputDescription)}>
         {description}
       </InputDescription>
     }
   </div>
+}
+
+function Switch(props: {
+  isOn: boolean,
+  onToggle: (newVal: boolean) => void,
+  label: React.ReactNode,
+  classNames?: {
+    root?: string,
+    switch?: string,
+    switchOn?: string,
+    switchOff?: string,
+    thumb?: string,
+    thumbOn?: string,
+    thumbOff?: string,
+    label?: string,
+  }
+}) {
+  return (
+    <div className={cn("flex flex-row gap-2 items-center cursor-pointer group", props.classNames?.root)}
+      onClick={() => props.onToggle(!props.isOn)}
+    >
+      <div className={cn("rounded-full bg-bg-2 p-1 w-8 transition-[background]",
+        props.isOn ? [ "bg-slate-600", props.classNames?.switchOn ] : [ '', props.classNames?.switchOff ],
+        props.classNames?.switch
+      )}>
+        <div className={cn("rounded-full bg-fg-3 w-3 h-3 relative transition-[background,left]",
+          props.isOn ? [ "bg-slate-200 left-3", props.classNames?.thumbOn ] : [ "left-0", props.classNames?.thumbOff ],
+          props.classNames?.thumb
+        )} />
+      </div>
+      <div className={cn("text-fg-2 group-hover:text-fg select-none",
+        props.classNames?.label
+      )}>
+        {props.label}
+      </div>
+    </div>
+  )
 }
 
 
@@ -285,20 +338,11 @@ function ProjectNameInput() {
       description={<div className="flex flex-col gap-2">
         The name of the package. If If you don't plan to publish your package, the name and version fields are optional.
 
-        <div className="flex flex-row gap-2 items-center cursor-pointer group"
-          onClick={() => updateUserSettings({ checkProjectNameOnNPM: !isCheckAvailEnabled })}
-        >
-          <div className={cn("rounded-full bg-bg-2 p-1 w-8 transition-[background]",
-            isCheckAvailEnabled ? "bg-slate-600" : ""
-          )}>
-            <div className={cn("rounded-full bg-fg-3 w-3 h-3 relative transition-[background,left]",
-              isCheckAvailEnabled ? "bg-slate-200 left-3" : "left-0"
-            )} />
-          </div>
-          <div className="text-fg-2 group-hover:text-fg">
-            Check Availability on NPM
-          </div>
-        </div>
+        <Switch
+          isOn={isCheckAvailEnabled}
+          onToggle={(newVal) => updateUserSettings({ checkProjectNameOnNPM: newVal })}
+          label="Check Availability on NPM"
+        />
       </div>}
     />
   </div>
@@ -1028,4 +1072,74 @@ function ProjectFundingInput() {
       }}
     />
   )
+}
+
+
+
+export function MaterialSymbolsPublic(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE */}<path fill="currentColor" d="M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22m-1-2.05V18q-.825 0-1.412-.587T9 16v-1l-4.8-4.8q-.075.45-.137.9T4 12q0 3.025 1.988 5.3T11 19.95m6.9-2.55q1.025-1.125 1.563-2.512T20 12q0-2.45-1.362-4.475T15 4.6V5q0 .825-.587 1.413T13 7h-2v2q0 .425-.288.713T10 10H8v2h6q.425 0 .713.288T15 13v3h1q.65 0 1.175.388T17.9 17.4" /></svg>) }
+export function MaterialSymbolsLock(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE */}<path fill="currentColor" d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm6-5q.825 0 1.413-.587T14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6z" /></svg>) }
+
+function ProjectPrivateInput() {
+  const [ packageJson, updatePackageJson ] = usePackageJson()
+
+  const field = useField(
+    packageJson.private, {
+    validate: (value) => packageJsonParser.private.validate(value),
+    clearable: true,
+    defaultData: () => true,
+  }, [])
+
+  return (
+    <BasicField
+      {...field}
+      classNames={{
+        // inputBlock: "bg-transparent py-0"
+      }}
+      label={"Private"}
+      onSave={(value) => {
+        const newPackageJson = { ...packageJson }
+        newPackageJson.private = value
+        updatePackageJson(newPackageJson)
+      }}
+      description="If true, prevents the package from being accidentally published to the npm registry."
+      renderInput={() => {
+        return <div className="flex items-center gap-1">
+          {[ false, true ].map((isPrivate, i) => {
+            const selected = field.value === isPrivate
+            return (
+              <div key={i} className={cn("flex flex-col items-start grow p-2 px-3 cursor-pointer text-fg-3 rounded-sm",
+                selected ? "text-fg-1 bg-bg-3 " : "hover:bg-bg-3/50 hover:text-fg-2",
+                "text-sm"
+              )}
+                onClick={() => field.setValue(isPrivate)}
+              >
+                <div className="flex gap-1 items-center">
+                  {isPrivate ? <MaterialSymbolsLock /> : <MaterialSymbolsPublic />}
+                  {isPrivate ? "Private" : "Public"}
+                </div>
+                <div className="text-xs opacity-80">
+                  {isPrivate ? "Can't be published to npm" : "Can be published to npm"}
+                </div>
+              </div>
+            )
+          })}
+          {/* <Switch
+            isOn={field.value ?? false}
+            onToggle={(checked) => field.setValue(checked)}
+            label={<div className="font-mono text-sm">{
+              field.value ? "Private (not published to npm)" : "Public (published to npm)"
+            }</div>}
+            classNames={{
+              switch: "h-6 w-10 rounded-xl",
+              switchOff: "bg-bg-3",
+              label: "ml-1",
+              thumb: "rounded-xl h-4 w-4",
+              thumbOn: "left-4"
+            }}
+          /> */}
+        </div>
+      }}
+    />
+  )
+
 }

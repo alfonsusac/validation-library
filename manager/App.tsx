@@ -38,13 +38,11 @@ function App() {
               title="package.json"
               description="Edit project settings."
               onClick={() => router.navigate("/package-json")}
-            // onClick={() => navigate("/package-json")}
             />
             <MenuItem
               title="test"
               description="Edit project settings."
               onClick={() => router.navigate("/package-json")}
-            // onClick={() => navigate("/package-json")}
             />
           </div>
         </div>
@@ -55,7 +53,6 @@ function App() {
           <SubpageHeader
             title="Project Settings"
             onBackClick={() => router.navigate("/")}
-          // onBackClick={() => navigate("/")}
           />
           {(packageJson && userSettings) ? <ProjectSettings /> : null}
         </div>

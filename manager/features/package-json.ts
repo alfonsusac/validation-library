@@ -29,7 +29,8 @@ export type PackageJson = {
   } | ({
     type?: string,
     url: string,
-  } | string)[]
+  } | string)[],
+  private?: boolean,
 }
 
 
