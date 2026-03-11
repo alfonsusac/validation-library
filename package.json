@@ -31,7 +31,6 @@
   "keywords": [
     "react"
   ],
-  "homepage": "https://www.google.com",
   "bugs": {
     "url": "https://www.github.com"
   },
@@ -41,5 +40,6 @@
   "license": "MIT",
   "funding": [
     "https://www.github.com/sponsors/alfonsusac"
-  ]
+  ],
+  "homepage": "https://www.github.com"
 }

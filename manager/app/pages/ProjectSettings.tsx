@@ -188,7 +188,12 @@ const BasicField = <T, E>({
 
     >
       {showSetValueButton ?
-        <SetValueButton onSetToNonUndefined={onSetToNonUndefined} />
+        <SetValueButton onSetToNonUndefined={() => {
+          onSetToNonUndefined()
+          setTimeout(() => {
+            inputRef.current?.focus()
+          }, 0)
+        }} />
         : renderInput?.(inputProps)
         ?? <Input {...inputProps} value={String(value)} />}
       {hideFooter ? null :
