@@ -29,8 +29,8 @@ export function ProjectSettings() {
     <H2>Links</H2>
     <ProjectURLInput />
     <ProjectBugsInput />
-    <ProjectFundingInput />
     <ProjectRepositoryInput />
+    <ProjectFundingInput />
     <H2>People</H2>
     <ProjectAuthorInput />
     <ProjectContributorsInput />
