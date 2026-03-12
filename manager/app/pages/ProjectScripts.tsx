@@ -135,13 +135,10 @@ function ScriptInput(props: {
   onDelete: () => void,
 }) {
 
-  // how do i make sure that if the user has made changes to the script, and tries to navigate away, they will be prompted to save or discard changes?
-
-  // how do i check if the name is unique among all scripts? I need to have access to the list of all scripts in the validation function, but the validation function only receives the current script value. Maybe I can pass the list of all scripts as a parameter to the validation function, and then check if there is another script with the same name?
-
   return (
     <InputBlock
       className="starting:opacity-0 transition-opacity duration-250 my-0"
+      draggable
     >
       <CollectionInputItemGroup
         error={typeof props.error === "string" ? props.error : undefined}
@@ -150,7 +147,7 @@ function ScriptInput(props: {
         <SubInput
           Icon={(props) => {
             return <div
-              className={cn(props.className, "font-mono flex items-center text-sm")}
+              className={cn(props.className, "font-mono flex items-center text-sm pointer-events-none")}
             >npm run</div>
           }}
           value={props.valueState.value.name}
@@ -168,7 +165,7 @@ function ScriptInput(props: {
         <SubInput
           Icon={(props) => {
             return <div
-              className={cn(props.className, "font-mono flex items-center text-sm")}
+              className={cn(props.className, "font-mono flex items-center text-sm pointer-events-none")}
             >npx</div>
           }}
           value={props.valueState.value.command}

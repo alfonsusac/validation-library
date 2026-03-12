@@ -6,7 +6,7 @@ import { usePackageJson } from "../../features/package-json-client"
 import { packageJsonParser } from "../../features/package-json-validations"
 import { useUserSettings } from "../../features/user-settings-client"
 import { call } from "../app-client"
-import { CibGithub, CibKoFi, CibOpenCollective, CibPatreon, CollectionInputItemGroup, ErrorMessage, H2, InputBase, InputBlock, InputBlockFooter, InputBlockMessage, InputButton, InputDescription, Label, LoadingMessage, LucideCheck, LucideExternalLink, LucideLink, LucidePlus, LucideTag, LucideUser, MaterialSymbolsAlternateEmail, MaterialSymbolsLock, MaterialSymbolsPublic, MingcuteAttachmentLine, OcticonRelFilePath16, RadixIconsCross2, SubInput, SuccessMessage, useField, WarnMessages } from "../app-ui"
+import { CibGithub, CibKoFi, CibOpenCollective, CibPatreon, CollectionInputItemGroup, ErrorMessage, H2, InputBase, InputBlock, InputBlockFooter, InputBlockMessage, InputButton, InputDescription, Label, LoadingMessage, LucideCheck, LucideExternalLink, LucideLink, LucidePlus, LucideTag, LucideUser, MaterialSymbolsAlternateEmail, MaterialSymbolsLock, MaterialSymbolsPublic, MingcuteAttachmentLine, OcticonRelFilePath16, RadixIconsCross2, SubInput, SuccessMessage, useField, useIndexedReorderDrag, WarnMessages } from "../app-ui"
 
 export function ProjectSettings() {
 
@@ -327,28 +327,12 @@ const StringListInput = (props: Omit<ComponentProps<"input">, 'value' | 'onChang
     props.onChange([ ...props.value, e.trim() ])
     setInputValue("")
   }
-  function toReorderedArray(arr: string[], from: number, to: number) {
-    if (from < 0 || from >= arr.length || to < 0 || to >= arr.length)
-      throw new Error("[toReorderedArray]: Index out of bounds")
-    const copy = [ ...arr ]
-    const [ moved ] = copy.splice(from, 1)
-    copy.splice(to, 0, moved)
-    return copy
-  }
-  function handleReorder(from: number, to: number) {
-    props.onChange(toReorderedArray(props.value, from, to))
-  }
-  // using dragEnd method because it works in VSCode's Simple Browser
-  function onDragEnd(e: React.DragEvent<HTMLDivElement>) {
-    const draggedId = e.currentTarget.id
-    const droppedId = document
-      .elementsFromPoint(e.clientX, e.clientY)
-      .map(el => el.hasAttribute("data-drop-id") ? el.getAttribute("data-drop-id") : null)
-      .filter(el => el !== null)[ 0 ]
-    console.log(draggedId, droppedId)
-    if (draggedId === null || droppedId === null || draggedId === undefined || droppedId === undefined) return
-    handleReorder(Number(draggedId), Number(droppedId))
-  }
+
+  const { onDragEnd } = useIndexedReorderDrag({
+    value: props.value,
+    onChange: props.onChange,
+  })
+
   function onRemoveButtonClicked(index: number) {
     props.onChange(props.value.filter((_, i) => i !== index))
   }
@@ -839,7 +823,7 @@ function ProjectFundingInput() {
     field.setValue(field.value?.map((c, idx) => idx === i ? { ...c, ...value } : c))
   }
   const onURLChange = (i: number, url: string) => {
-    const matchedType = Object.entries(commonTypeMap).find(([, v ]) => url.includes(v.match))
+    const matchedType = Object.entries(commonTypeMap).find(([ , v ]) => url.includes(v.match))
     if (matchedType) {
       return subinputOnChange(i, { url, type: matchedType[ 0 ] })
     }

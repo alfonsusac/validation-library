@@ -220,7 +220,7 @@ export function SubInput<T extends string | number | readonly string[] | undefin
 
 function SubInputFooter(props: ComponentProps<"div">) { return <div {...props} className={cn("flex items-center gap-2 px-2 py-1 text-xs", props.className)} /> }
 
-export function CollectionInputItemGroup(props: ComponentProps<"div"> & {
+export function CollectionInputItemGroup({ error, single, ...props }: ComponentProps<"div"> & {
   error?: string | object | undefined,
   single?: boolean
 }) {
@@ -229,9 +229,9 @@ export function CollectionInputItemGroup(props: ComponentProps<"div"> & {
   }
   return <div {...props} className={cn("flex flex-col px-1 py-1", props.className)}>
     {props.children}
-    {!props.single && <>
+    {!single && <>
       <SubInputFooter className="mb-1">
-        <ErrorMessage error={typeof props.error === "string" ? props.error : undefined} />
+        <ErrorMessage error={typeof error === "string" ? error : undefined} />
       </SubInputFooter>
       <CollectionSeparator />
     </>}
@@ -283,4 +283,37 @@ export function BasicFieldFooter({
       </button>}
     </InputBlockFooter>
   )
+}
+
+
+export function useIndexedReorderDrag<T>(props: {
+  value: T[],
+  onChange: (newValue: T[]) => void
+}) {
+  function toReorderedArray(arr: T[], from: number, to: number) {
+    if (from < 0 || from >= arr.length || to < 0 || to >= arr.length)
+      throw new Error("[toReorderedArray]: Index out of bounds")
+    const copy = [ ...arr ]
+    const [ moved ] = copy.splice(from, 1)
+    copy.splice(to, 0, moved)
+    return copy
+  }
+  function handleReorder(from: number, to: number) {
+    props.onChange(toReorderedArray(props.value, from, to))
+  }
+  // using dragEnd method because it works in VSCode's Simple Browser
+  function onDragEnd(e: React.DragEvent<HTMLDivElement>) {
+    const draggedId = e.currentTarget.id
+    const droppedId = document
+      .elementsFromPoint(e.clientX, e.clientY)
+      .map(el => el.hasAttribute("data-drop-id") ? el.getAttribute("data-drop-id") : null)
+      .filter(el => el !== null)[ 0 ]
+    console.log(draggedId, droppedId)
+    if (draggedId === null || droppedId === null || draggedId === undefined || droppedId === undefined) return
+    handleReorder(Number(draggedId), Number(droppedId))
+  }
+
+  return {
+    onDragEnd, // Put this on destination element
+  }
 }
