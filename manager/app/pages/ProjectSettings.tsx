@@ -25,10 +25,12 @@ export function ProjectSettings() {
     <ProjectDescriptionInput />
     <ProjectPrivateInput />
     <ProjectKeywordsInput />
+    <ProjectLicenseInput />
+    <H2>Links</H2>
     <ProjectURLInput />
     <ProjectBugsInput />
-    <ProjectLicenseInput />
     <ProjectFundingInput />
+    <ProjectRepositoryInput />
     <H2>People</H2>
     <ProjectAuthorInput />
     <ProjectContributorsInput />
@@ -147,6 +149,7 @@ const BasicField = <T, E>({
   description?: React.ReactNode,
   renderInput?: (props: {
     ref?: React.RefObject<HTMLInputElement | null>, // focusRef to focus on input element it when clicking on the input block
+    value: NonNullable<T>,
   }) => React.ReactNode,
   hideFooter?: boolean,
   placeholder?: string,
@@ -173,7 +176,7 @@ const BasicField = <T, E>({
     !!(error && typeof error === "string") || !!warns.length
     || !!extraMessages || resettable || !!isValidating || !!isCheckingWarns || isChanged
 
-  const inputProps = { value, onChange, ref: inputRef, placeholder, onKeyDown: onInputEnter }
+  const inputProps = { onChange, ref: inputRef, placeholder, onKeyDown: onInputEnter, value: value as NonNullable<T> }
 
   const SetValueButton = (props: { onSetToNonUndefined: () => void }) => <InputButton
     className="p-2.5 items-start"
@@ -196,7 +199,7 @@ const BasicField = <T, E>({
         setIsFocus(false)
     }}
     tabIndex={0}
-    className={value===undefined ? "-my-3" : ""}
+    className={value === undefined ? "-my-3" : ""}
   >
     {value !== undefined &&
       <div className={cn("label flex", classNames?.label)}>
@@ -566,16 +569,17 @@ function SubInput<T extends string | number | readonly string[] | undefined>(pro
   onSetUndefined: () => void,
   inputOnChange: (e: ChangeEvent<HTMLInputElement>) => void,
   setLabel: React.ReactNode,
-  error?: string,
+  error: string | undefined,
   renderUndefined?: () => React.ReactNode,
   inputRef?: React.Ref<HTMLInputElement | null>,
+  clearable?: boolean,
 }) {
   const ref = useRef<HTMLInputElement>(null)
   // const usedRef = props.inputRef ?? ref
   return (
     <div className="">
       <div className="flex gap-1 items-start px-2 -ml-1">
-        <props.Icon className="text-fg-4 text-lg shrink-0 w-5 h-8 " />
+        <props.Icon className="text-fg-4 shrink-0 w-4.5 h-8 " />
         {props.value === undefined ?
           (props.renderUndefined?.() ??
             <InputButton onClick={() => {
@@ -601,7 +605,9 @@ function SubInput<T extends string | number | readonly string[] | undefined>(pro
                 ref.current = null
               }
             }} className="" placeholder={props.placeholder} value={props.value} onChange={props.inputOnChange} />
-            <CloseButton onClick={props.onSetUndefined} className="h-8 block text-base leading-5 " />
+            {props.clearable !== false &&
+              <CloseButton onClick={props.onSetUndefined} className="h-8 block text-base leading-5 " />
+            }
           </>
         }
       </div>
@@ -656,13 +662,15 @@ function ProjectBugsInput() {
       {...field}
       setLabel="Set Bugs URL/Email"
       label="Bugs URL"
+      description="The URL to the project's issue tracker. If a URL is provided, it will 
+      be used by the `npm bugs` command."
       onSave={(bugsUrl) => {
         const newPackageJson = { ...packageJson }
         newPackageJson.bugs = bugsUrl
         updatePackageJson(newPackageJson)
       }}
       renderInput={(props) =>
-        <div className="flex flex-col">
+        <CollectionInputItemGroup single>
           <SubInput
             inputRef={props.ref}
             Icon={MingcuteAttachmentLine}
@@ -674,7 +682,6 @@ function ProjectBugsInput() {
             setLabel="Set URL"
             error={typeof field.error === "object" ? field.error.url : undefined}
           />
-
           <SubInput
             Icon={MaterialSymbolsAlternateEmail}
             value={email}
@@ -685,9 +692,8 @@ function ProjectBugsInput() {
             setLabel="Set email"
             error={typeof field.error === "object" ? field.error.email : undefined}
           />
-        </div>}
-      description="The URL to the project's issue tracker. If a URL is provided, it will 
-      be used by the `npm bugs` command."
+        </CollectionInputItemGroup>}
+
     />
   </div>
 }
@@ -895,14 +901,17 @@ function CollectionInput<T extends any[] | undefined, E>(props: {
   )
 }
 function CollectionInputItemGroup(props: ComponentProps<"div"> & {
-  error: string | object | undefined,
+  error?: string | object | undefined,
+  single?: boolean
 }) {
   return <div {...props} className={cn("flex flex-col", props.className)}>
     {props.children}
-    <SubInputFooter className="mb-1">
-      <ErrorMessage error={typeof props.error === "string" ? props.error : undefined} />
-    </SubInputFooter>
-    <CollectionSeparator />
+    {!props.single && <>
+      <SubInputFooter className="mb-1">
+        <ErrorMessage error={typeof props.error === "string" ? props.error : undefined} />
+      </SubInputFooter>
+      <CollectionSeparator />
+    </>}
   </div>
 }
 
@@ -1146,24 +1155,79 @@ function ProjectPrivateInput() {
               </div>
             )
           })}
-          {/* <Switch
-            isOn={field.value ?? false}
-            onToggle={(checked) => field.setValue(checked)}
-            label={<div className="font-mono text-sm">{
-              field.value ? "Private (not published to npm)" : "Public (published to npm)"
-            }</div>}
-            classNames={{
-              root: "ml-1 my-1",
-              switch: "h-6 w-10 rounded-xl",
-              switchOff: "bg-bg-3",
-              label: "ml-1",
-              thumb: "rounded-xl h-4 w-4",
-              thumbOn: "left-4"
-            }}
-          /> */}
         </div>
       }}
     />
   )
 
+}
+
+
+export function MaterialSymbolsFolder(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE */}<path fill="currentColor" d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h6l2 2h8q.825 0 1.413.588T22 8v10q0 .825-.587 1.413T20 20z" /></svg>) }
+export function LucideTag(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /><circle cx="7.5" cy="7.5" r=".5" fill="currentColor" /></g></svg>) }
+export function LucideFolder(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>) }
+export function OcticonRelFilePath16(props: SVGProps<SVGSVGElement>) {  return (    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 16 16" {...props}>{/* Icon from Octicons by GitHub - https://github.com/primer/octicons/blob/main/LICENSE */}<path fill="currentColor" d="M13.94 3.045a.75.75 0 0 0-1.38-.59l-4.5 10.5a.75.75 0 1 0 1.38.59zM5 11.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0" /></svg>  )}
+
+function ProjectRepositoryInput() {
+  const [ packageJson, updatePackageJson ] = usePackageJson()
+
+  const field = useField(
+    packageJsonParser.repository.normalize(packageJson.repository), {
+    validate: (value) => packageJsonParser.repository.validate(value),
+    clearable: true,
+    defaultData: () => ({ url: "", type: "git" }),
+  }, [])
+
+  return (
+    <BasicField
+      {...field}
+      description="Information about where the source code for your package lives. This is used by the `npm repo` command to open the package's repository in a web browser."
+      label={"Repository"}
+      setLabel={"Set Repository"}
+      onSave={(value) => {
+        const newPackageJson = { ...packageJson }
+        newPackageJson.repository = value
+        updatePackageJson(newPackageJson)
+      }}
+      renderInput={(props) => {
+        return <CollectionInputItemGroup
+          error={undefined}
+          single
+        >
+          <SubInput
+            inputRef={props.ref}
+            Icon={LucideLink}
+            value={field.value?.url}
+            placeholder="Link (e.g. github:user/repo)"
+            onSetNotUndefined={() => { }}
+            onSetUndefined={() => field.setValue(undefined)}
+            inputOnChange={(e) => field.setValue({ ...props.value, url: e.target.value })}
+            setLabel="Set Repository URL"
+            error={typeof field.error === "object" ? field.error.url : undefined}
+          />
+          <SubInput
+            Icon={LucideTag}
+            value={field.value?.type}
+            placeholder="Type (e.g. git)"
+            onSetNotUndefined={() => { }}
+            onSetUndefined={() => { }}
+            inputOnChange={(e) => field.setValue({ ...props.value, type: e.target.value })}
+            setLabel="Set Repository Type"
+            clearable={false}
+            error={typeof field.error === "object" ? field.error.type : undefined}
+          />
+          <SubInput
+            Icon={OcticonRelFilePath16}
+            value={field.value?.directory}
+            placeholder="Directory (for monorepos)"
+            onSetNotUndefined={() => field.setValue({ ...props.value, directory: "" })}
+            onSetUndefined={() => field.setValue({ ...props.value, directory: undefined })}
+            inputOnChange={(e) => field.setValue({ ...props.value, directory: e.target.value })}
+            setLabel="Set Repository Directory (for monorepos)"
+            error={typeof field.error === "object" ? field.error.directory : undefined}
+          />
+        </CollectionInputItemGroup>
+      }}
+    />
+  )
 }

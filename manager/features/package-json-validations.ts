@@ -274,9 +274,9 @@ export const packageJsonParser = {
           return "URL cannot be empty"
         if (!validUrl(value))
           return "URL must be a valid URL"
-        const matchinType = Object.entries(packageJsonParser.funding.commonTypeMap).find(([_, v]) => value.includes(v.match))
+        const matchinType = Object.entries(packageJsonParser.funding.commonTypeMap).find(([ _, v ]) => value.includes(v.match))
         if (matchinType)
-          return matchinType[1].validate(value)
+          return matchinType[ 1 ].validate(value)
       }
       function objPath(value: object) {
         if ("url" in value === false)
@@ -368,10 +368,107 @@ export const packageJsonParser = {
       if (typeof value !== "boolean")
         return "private must be a boolean"
     }
+  },
+  repository: {
+    normalize: (val: PackageJson[ 'repository' ]) => {
+      if (typeof val === "undefined") return val
+      if (typeof val === "string") return { type: "git", url: val }
+      if (typeof val === "object" && val !== null) return val
+      return val
+    },
+    validate: (value: unknown) => {
+      if (typeof value === "undefined") return
+
+      function validateUserProjectPath(repo: string) {
+        if (repo.length === 0) return "repository path cannot be empty"
+        if (repo.includes("/") === false) return "repository path must include a slash (e.g. user/repo)"
+        if (countIncludes(repo, "/") > 1)
+          return "repository path cannot contain more than one slash"
+        const [ user, project ] = repo.split("/")
+        if (user.length === 0) return "repository user cannot be empty"
+        if (project.length === 0) return "repository project cannot be empty"
+        if (countIncludes(project, ".") > 1)
+          return "repository project cannot contain more than one dot"
+        if (project.includes(".")) {
+          const [ name, ext ] = project.split(".")
+          if (ext !== "git") return "repository project extension must be .git"
+        }
+        return
+      }
+
+      function validateStringPath(value: string) {
+        if (value.trim() === "")
+          return "repository URL cannot be empty"
+        if (value.startsWith("gist:")) { // gist
+          const gistId = value.slice("gist:".length)
+          if (gistId.length === 0)
+            return "Gist ID cannot be empty"
+          if (!/^[a-fA-F0-9]+$/.test(gistId))
+            return "Gist ID must be a hexadecimal string"
+          return
+        }
+        if (value.includes("://")) { // url
+          if (validUrl(value) === false)
+            return "repository URL must be a valid URL"
+          return
+        }
+        if (value.includes(":")) { // explicit
+          if (countIncludes(value, ":") > 1)
+            return "repository URL cannot contain more than one colon"
+          const [ host, repo ] = value.split(":")
+          if (host.length === 0) return "repository host cannot be empty"
+          if (countIncludes(host, "@") > 1)
+            return "repository host cannot contain more than one @ symbol"
+          if (host.includes("@")) {
+            const [ user, domain ] = host.split("@")
+            if (user.length === 0) return "repository host user cannot be empty"
+            if (domain.length === 0) return "repository host domain cannot be empty"
+          }
+          return validateUserProjectPath(repo)
+        }
+        if (value.includes("/")) { // implicity github
+          if (countIncludes(value, "/") > 1)
+            return "repository URL cannot contain more than one slash if it does not include a protocol"
+          return validateUserProjectPath(value)
+        }
+        return "repository URL must be in a valid format:\"scheme://url\", \"user@host:user/repo\", \"host:user/repo\", \"user/repo\", or \"gist:id\""
+      }
+
+      if (typeof value === "string") {
+        return validateStringPath(value)
+      }
+
+      if (typeof value === "object" && value !== null) {
+        const error = {
+          type: (() => {
+            if ("type" in value === false)
+              return "repository object must have a type property"
+            if (typeof value.type !== "string")
+              return "repository type must be a string"
+          })(),
+          url: (() => {
+            if ("url" in value === false)
+              return "repository object must have a url property"
+            if (typeof value.url !== "string")
+              return "repository url must be a string"
+            return validateStringPath(value.url)
+          })(),
+          directory: (() => {
+            if ("directory" in value && value.directory !== undefined && typeof value.directory !== "string")
+              return "repository directory must be a string"
+          })()
+        }
+        if (typeof error.type === "undefined" && typeof error.url === "undefined" && typeof error.directory === "undefined")
+          return
+        return error
+      }
+    },
   }
 }
 
-
+function countIncludes(str: string, search: string) {
+  return str.split(search).length - 1
+}
 
 function ordinalize(n: number) {
   const s = [ "th", "st", "nd", "rd" ]
@@ -383,6 +480,9 @@ function validEmail(email: string) {
   // Simple email regex for validation
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return re.test(email)
+}
+function isHexadecimal(str: string) {
+  return /^[a-fA-F0-9]+$/.test(str)
 }
 
 function validUrl(url: string) {

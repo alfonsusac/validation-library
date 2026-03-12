@@ -31,6 +31,11 @@ export type PackageJson = {
     url: string,
   } | string)[],
   private?: boolean,
+  repository?: string | {
+    type: string,
+    url: string,
+    directory?: string,
+  }
 }
 
 
