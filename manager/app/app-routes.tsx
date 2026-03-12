@@ -16,12 +16,12 @@ export function RoutePage(props: {
   const isCurrentPath = matchRoute(router.current || "", props.path)
   return <div
     className={cn(
-      "transition-discrete transition-all absolute inset-0 overflow-x-hidden overflow-y-auto",
+      "transition-discrete transition-all absolute inset-0 overflow-x-hidden overflow-y-visible sm:overflow-visible",
       "duration-300 starting:opacity-0",
-      "sm:static",
+      "sm:relative",
       props.classNames?.all,
       isCurrentPath ? "" : "pointer-events-none",
-      isCurrentPath ? props.classNames?.shown : [ props.classNames?.hidden, "sm:translate-x-0 sm:opacity-0 sm:hidden sm:duration-0"],
+      isCurrentPath ? props.classNames?.shown : [ props.classNames?.hidden, "sm:translate-x-0 sm:opacity-0 sm:hidden sm:duration-0" ],
     )}
     data-current={isCurrentPath ? "" : undefined}
   >
@@ -40,6 +40,7 @@ export function useRouter() {
     return {
       current: "/",
       history: [] as string[],
+      interruptors: new Set<symbol>,
     }
   })
 
@@ -47,11 +48,23 @@ export function useRouter() {
     updateRouter({
       current: path,
       history: [ ...router.history, router.current ],
+      interruptors: router.interruptors,
     })
+  }
+
+  function addInterruption() {
+    const sym = Symbol()
+    router.interruptors.add(sym)
+    updateRouter(router)
+    return () => {
+      router.interruptors.delete(sym)
+      updateRouter(router)
+    }
   }
 
   return {
     ...router,
-    navigate
+    navigate,
+    addInterruption,
   }
 }

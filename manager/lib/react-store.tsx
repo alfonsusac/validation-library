@@ -156,14 +156,21 @@ export function useQuery<T, T2 = T>(
   if (required && data === undefined) {
     throw new Error(`Data for store ${ key } is required but not available yet.`)
   }
-  function update(newData: T) {
+  function update(newData: Updater<T>) {
     const store = client.getStore<T>(key)
     if (!store) throw new Error(`Store with key ${ key } not found. Can't update non-existing store.`)
-    store.update(newData)
+    const next =
+      typeof newData === "function"
+        ? (newData as (prev: T) => T)(store.get())
+        : newData
+    store.update(next)
   }
 
   return [ data, update ] as [ T2, (newData: T) => void ]
 }
+
+export type Updater<T> = T | ((prevData: T) => T)
+
 
 export function useWS() {
   const id = "wss"

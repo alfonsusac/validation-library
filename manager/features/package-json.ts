@@ -35,7 +35,8 @@ export type PackageJson = {
     type: string,
     url: string,
     directory?: string,
-  }
+  },
+  scripts?: Record<string, string>,
 }
 
 
