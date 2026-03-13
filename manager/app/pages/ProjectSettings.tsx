@@ -6,7 +6,7 @@ import { usePackageJson } from "../../features/package-json-client"
 import { packageJsonParser } from "../../features/package-json-validations"
 import { useUserSettings } from "../../features/user-settings-client"
 import { call } from "../app-client"
-import { CibGithub, CibKoFi, CibOpenCollective, CibPatreon, CollectionInputItemGroup, ErrorMessage, H2, InputBase, InputBlock, InputBlockFooter, InputBlockMessage, InputButton, InputDescription, Label, LoadingMessage, LucideCheck, LucideExternalLink, LucideLink, LucidePlus, LucideTag, LucideUser, MaterialSymbolsAlternateEmail, MaterialSymbolsLock, MaterialSymbolsPublic, MingcuteAttachmentLine, OcticonRelFilePath16, RadixIconsCross2, SubInput, SuccessMessage, useField, useIndexedReorderDrag, WarnMessages } from "../app-ui"
+import { AddButton, CibGithub, CibKoFi, CibOpenCollective, CibPatreon, CollectionInputItemGroup, ErrorMessage, H2, InputBase, InputBlock, InputBlockFooter, InputBlockMessage, InputButton, InputDescription, Label, LoadingMessage, LucideCheck, LucideExternalLink, LucideLink, LucidePlus, LucideTag, LucideUser, MaterialSymbolsAlternateEmail, MaterialSymbolsLock, MaterialSymbolsPublic, MingcuteAttachmentLine, OcticonRelFilePath16, RadixIconsCross2, SubInput, SuccessMessage, useField, useIndexedReorderDrag, WarnMessages } from "../app-ui"
 
 export function ProjectSettings() {
 
@@ -79,16 +79,11 @@ const BasicField = <T, E>({
 
   const inputProps = { onChange, ref: inputRef, placeholder, onKeyDown: onInputEnter, value: value as NonNullable<T> }
 
-  const SetValueButton = (props: { onSetToNonUndefined: () => void }) => <InputButton
-    className="p-2.5 items-start"
-    onClick={props.onSetToNonUndefined}><LucidePlus className="shrink-0 h-[1lh]" />
-    <div className="flex flex-col">
-      {setLabel ?? "Set Value"}
-      <div className="text-xs opacity-75 text-pretty">
-        {description}
-      </div>
-    </div>
-  </InputButton>
+  const SetValueButton = (props: { onSetToNonUndefined: () => void }) => <AddButton
+    label={setLabel ?? "Set Value"}
+    desc={description}
+    onClick={props.onSetToNonUndefined}
+  />
 
   return <div
     onFocus={() => {

@@ -170,7 +170,11 @@ export function useQuery<T, T2 = T>(
 }
 
 export type Updater<T> = T | ((prevData: T) => T)
-
+export function resolveUpdater<T>(updater: Updater<T>, prevData: T): T {
+  return typeof updater === "function"
+    ? (updater as (prev: T) => T)(prevData)
+    : updater
+}
 
 export function useWS() {
   const id = "wss"

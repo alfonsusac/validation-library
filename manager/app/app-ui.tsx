@@ -22,12 +22,14 @@ export const InputBlockMessage = (props: ComponentProps<"div">) => <div {...prop
 export const InputDescription = (props: ComponentProps<"div">) => <div {...props} className={cn("text-xs text-fg-4 hover:text-fg-2 px-2", props.className)} />
 export const InputBox = (props: ComponentProps<"div">) => <div {...props} className={cn("input-box gap-1 items-start", props.className)} />
 export const InputBase = (props: ComponentProps<"input">) => <input {...props} className={cn("input w-full text-fg rounded p-1.5 px-2 font-mono text-sm outline-none placeholder:text-fg-4 h-8", props.className)} />
-export const InputButton = (props: ComponentProps<"button">) => <button {...props} className={cn("input-button button ghost text-start hover:bg-bg-3/50 flex items-center gap-1 px-1.5 py-1.5 grow", props.className)} />
+export const InputButton = (props: ComponentProps<"button">) => <button {...props} className={cn("input-button button ghost text-start hover:bg-bg-3/50 flex items-center gap-1 px-1.5 py-1.5 grow shrink-0", props.className)} />
 export const InputStartIcon = (props: ComponentProps<"div">) => <div {...props} className={cn("text-fg-4 shrink-0 w-4.5 ml-1 h-8 ml-1", props.className)} />
 export const ErrorMessage = ({ error, ...props }: { error: any } & ComponentProps<"div">) => typeof error !== "string" ? null : <div {...props} className={cn("text-error", props.className)}>{error}</div>
 export const WarnMessages = (props: { warns: string[] }) => <div className="text-warning/25">{props.warns.map((warn, i) => <div key={i}>{warn}</div>)}</div>
 export const SuccessMessage = (props: { children?: React.ReactNode }) => <div className="text-success">{props.children}</div>
 export const LoadingMessage = (props: { children?: React.ReactNode }) => <div className="text-fg-3/75 italic">{props.children}</div>
+export const CloseButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost p-1 text-fg-4 hover:text-fg-3 shrink-0 h-8 block text-base leading-5 w-5.5 p-0", props.className)}><LucideX /></button>
+
 
 export function LucidePlus(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7-7v14" /></svg>) }
 export function LucideX(props: React.SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE */}<path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 6L6 18M6 6l12 12" /></svg>) }
@@ -49,6 +51,27 @@ export function MingcuteAttachmentLine(props: React.SVGProps<SVGSVGElement>) { r
 export function MaterialSymbolsPublic(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE */}<path fill="currentColor" d="M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22m-1-2.05V18q-.825 0-1.412-.587T9 16v-1l-4.8-4.8q-.075.45-.137.9T4 12q0 3.025 1.988 5.3T11 19.95m6.9-2.55q1.025-1.125 1.563-2.512T20 12q0-2.45-1.362-4.475T15 4.6V5q0 .825-.587 1.413T13 7h-2v2q0 .425-.288.713T10 10H8v2h6q.425 0 .713.288T15 13v3h1q.65 0 1.175.388T17.9 17.4" /></svg>) }
 export function MaterialSymbolsLock(props: SVGProps<SVGSVGElement>) { return (<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>{/* Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE */}<path fill="currentColor" d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm6-5q.825 0 1.413-.587T14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6z" /></svg>) }
 
+export function AddButton(props: {
+  label: React.ReactNode,
+  desc?: React.ReactNode,
+  onClick: () => void
+}) {
+  return (
+    <InputButton
+      className="p-2.5 items-start"
+      onClick={props.onClick}>
+      <LucidePlus className="shrink-0 h-[1lh]" />
+      <div className="flex flex-col">
+        <span>{props.label}</span>
+        <div className="text-xs opacity-75 text-pretty">
+          {props.desc}
+        </div>
+      </div>
+    </InputButton>
+  )
+}
+
+export type FieldState<T, E> = ReturnType<typeof useField<T, E>>
 
 export const useField = <T, E>(initialData: T, opts:
   {
@@ -173,8 +196,8 @@ export function SubInput<T extends string | number | readonly string[] | undefin
   renderUndefined?: () => React.ReactNode,
   inputRef?: React.Ref<HTMLInputElement | null>,
   clearable?: boolean,
+  disabled?: boolean
 }) {
-  const CloseButton = (props: ComponentProps<"button">) => <button {...props} className={cn("button ghost p-1 text-fg-4 hover:text-fg-3 shrink-0 h-8 block text-base leading-5 w-5.5 p-0", props.className)}><LucideX /></button>
 
   const ref = useRef<HTMLInputElement>(null)
   return (
@@ -205,7 +228,10 @@ export function SubInput<T extends string | number | readonly string[] | undefin
               return () => {
                 ref.current = null
               }
-            }} className="" placeholder={props.placeholder} value={props.value} onChange={props.inputOnChange} />
+            }} className=""
+              placeholder={props.placeholder} value={props.value} onChange={props.inputOnChange}
+              disabled={props.disabled}
+            />
             {props.clearable !== false &&
               <CloseButton onClick={props.onSetUndefined} />
             }
@@ -288,27 +314,31 @@ export function BasicFieldFooter({
 
 export function useIndexedReorderDrag<T>(props: {
   value: T[],
-  onChange: (newValue: T[]) => void
+  onChange: (newValue: T[], newIndicies: number[]) => void
 }) {
   function toReorderedArray(arr: T[], from: number, to: number) {
     if (from < 0 || from >= arr.length || to < 0 || to >= arr.length)
       throw new Error("[toReorderedArray]: Index out of bounds")
     const copy = [ ...arr ]
+    const indices = copy.map((_, i) => i)
     const [ moved ] = copy.splice(from, 1)
+    const [ movedIndex ] = indices.splice(from, 1)
     copy.splice(to, 0, moved)
-    return copy
+    indices.splice(to, 0, movedIndex)
+    return [ copy, indices ] as const
   }
   function handleReorder(from: number, to: number) {
-    props.onChange(toReorderedArray(props.value, from, to))
+    props.onChange(...toReorderedArray(props.value, from, to))
   }
   // using dragEnd method because it works in VSCode's Simple Browser
   function onDragEnd(e: React.DragEvent<HTMLDivElement>) {
-    const draggedId = e.currentTarget.id
+    const draggedId = e.currentTarget.getAttribute("data-drop-id")
+    // console.log(e.target)
     const droppedId = document
       .elementsFromPoint(e.clientX, e.clientY)
       .map(el => el.hasAttribute("data-drop-id") ? el.getAttribute("data-drop-id") : null)
       .filter(el => el !== null)[ 0 ]
-    console.log(draggedId, droppedId)
+    // console.log([draggedId, droppedId])
     if (draggedId === null || droppedId === null || draggedId === undefined || droppedId === undefined) return
     handleReorder(Number(draggedId), Number(droppedId))
   }
@@ -316,4 +346,30 @@ export function useIndexedReorderDrag<T>(props: {
   return {
     onDragEnd, // Put this on destination element
   }
+}
+
+
+
+
+
+export function SomeSortOfConfirmThingWrapper({ shown, ...props }: ComponentProps<"div"> & {
+  shown: boolean
+}) {
+  return (
+    <div {...props} className={cn("bg-linear-to-t from-bg to-bg/0 fixed z-90 left-0 right-0 bottom-0 p-4 flex justify-center pointer-events-none transition-all",
+      !shown && "opacity-0",
+      props.className
+    )} />
+  )
+}
+export function SomeSortOfConfirmThing({ shown, ...props }: ComponentProps<"div"> & {
+  shown: boolean
+}) {
+  return (
+    <div {...props} className={cn("bg-bg-2 p-2.5 rounded-xl flex gap-2 justify-end items-center w-fit max-w-110 pointer-events-auto",
+      "w-full",
+      "transition-all transition-discrete relative",
+      !shown && "-top-0 pointer-events-none",
+    )} />
+  )
 }
