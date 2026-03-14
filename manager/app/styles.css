@@ -36,16 +36,13 @@
 @layer components {
   .button {
     @apply rounded p-1 px-4 bg-bg-4 text-fg text-sm;
-
     &:hover {
       background-color: color-mix(in oklab, var(--color-bg-4), white 5%);
       @apply bg-bg-3 cursor-pointer;
     }
-
     &:disabled {
       @apply bg-transparent text-fg-4 pointer-events-none
     }
-
     &.ghost{
       @apply bg-transparent text-fg-3;
       &:hover {

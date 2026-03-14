@@ -54,11 +54,13 @@ export function MaterialSymbolsLock(props: SVGProps<SVGSVGElement>) { return (<s
 export function AddButton(props: {
   label: React.ReactNode,
   desc?: React.ReactNode,
-  onClick: () => void
+  className?: string,
+  onClick: () => void,
+  subInput?: boolean
 }) {
   return (
     <InputButton
-      className="p-2.5 items-start"
+      className={cn(props.subInput ? "" : "p-2.5", "items-start", props.className)}
       onClick={props.onClick}>
       <LucidePlus className="shrink-0 h-[1lh]" />
       <div className="flex flex-col">
@@ -196,26 +198,29 @@ export function SubInput<T extends string | number | readonly string[] | undefin
   renderUndefined?: () => React.ReactNode,
   inputRef?: React.Ref<HTMLInputElement | null>,
   clearable?: boolean,
-  disabled?: boolean
+  disabled?: boolean,
 }) {
 
   const ref = useRef<HTMLInputElement>(null)
   return (
-    <div className="">
-      <div className="flex gap-1 items-start">
-        <props.Icon className="text-fg-4 shrink-0 min-w-4.5 h-8 ml-1" />
-        {props.value === undefined ?
-          (props.renderUndefined?.() ??
-            <InputButton onClick={() => {
+    <div className="flex gap-1 items-start grow">
+      <props.Icon className="text-fg-4 shrink-0 min-w-4.5 h-8 ml-1" />
+      {props.value === undefined ?
+        (props.renderUndefined?.() ??
+          <AddButton
+            subInput
+            onClick={() => {
               props.onSetNotUndefined()
               setTimeout(() => {
                 ref.current?.focus()
               }, 0)
-            }} className="">
-              <LucidePlus />{props.setLabel}
-            </InputButton>)
-          :
-          <>
+            }}
+            label={props.setLabel}
+          />
+        )
+        :
+        <div className="flex grow">
+          <div className="flex-col grow">
             <InputBase ref={(el) => {
               ref.current = el
               if (typeof props.inputRef === "function") {
@@ -232,13 +237,13 @@ export function SubInput<T extends string | number | readonly string[] | undefin
               placeholder={props.placeholder} value={props.value} onChange={props.inputOnChange}
               disabled={props.disabled}
             />
-            {props.clearable !== false &&
-              <CloseButton onClick={props.onSetUndefined} />
-            }
-          </>
-        }
-      </div>
-      <ErrorMessage error={props.error} className="ml-9 text-xs -mt-1" />
+            <ErrorMessage error={props.error} className="ml-2 text-xs -mt-1" />
+          </div>
+          {props.clearable !== false &&
+            <CloseButton onClick={props.onSetUndefined} />
+          }
+        </div>
+      }
     </div>
   )
 }
@@ -356,20 +361,25 @@ export function SomeSortOfConfirmThingWrapper({ shown, ...props }: ComponentProp
   shown: boolean
 }) {
   return (
-    <div {...props} className={cn("bg-linear-to-t from-bg to-bg/0 fixed z-90 left-0 right-0 bottom-0 p-4 flex justify-center pointer-events-none transition-all",
+    <div {...props} className={cn("fixed z-90 left-0 right-0 bottom-0 p-4 flex justify-center pointer-events-none",
       !shown && "opacity-0",
+      "transition-all duration-300",
       props.className
-    )} />
+    )}>
+      {/* <div className="bg-linear-to-t from-bg to-bg/0 absolute inset-0" /> */}
+      {props.children}
+    </div>
   )
 }
 export function SomeSortOfConfirmThing({ shown, ...props }: ComponentProps<"div"> & {
   shown: boolean
 }) {
   return (
-    <div {...props} className={cn("bg-bg-2 p-2.5 rounded-xl flex gap-2 justify-end items-center w-fit max-w-110 pointer-events-auto",
-      "w-full",
-      "transition-all transition-discrete relative",
-      !shown && "-top-0 pointer-events-none",
+    <div {...props} className={cn("bg-bg-3 p-2.5 rounded-xl flex gap-2 justify-end items-center w-fit max-w-110 pointer-events-auto",
+      "w-full top-0",
+      "transition-[top] relative duration-150",
+      "shadow-xl",
+      !shown && "top-8 pointer-events-none",
     )} />
   )
 }

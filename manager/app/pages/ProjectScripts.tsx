@@ -1,6 +1,6 @@
-import { useEffect, type ComponentProps } from "react"
+import { useEffect } from "react"
 import { usePackageJson } from "../../features/package-json-client"
-import { AddButton, BasicFieldFooter, CloseButton, CollectionInputItemGroup, ErrorMessage, H2, InputBase, InputBlock, InputBlockFooter, InputBlockMessage, InputButton, InputDescription, LucidePlus, SomeSortOfConfirmThing, SomeSortOfConfirmThingWrapper, SubInput, useField, useIndexedReorderDrag, WarnMessages } from "../app-ui"
+import { AddButton, CloseButton, CollectionInputItemGroup, H2, InputBlock, InputBlockFooter, InputButton, InputDescription, Label, LucidePlus, SomeSortOfConfirmThing, SomeSortOfConfirmThingWrapper, SubInput, useField, useIndexedReorderDrag, type FieldState } from "../app-ui"
 import { cn } from "lazy-cn"
 import { useRouter } from "../app-routes"
 import { resolveUpdater, type Updater } from "../../lib/react-store"
@@ -17,67 +17,13 @@ type ScriptErrors = ({
   postcommand: string | undefined,
 } | undefined)[]
 
+type ScriptFieldState = FieldState<ScriptsListArray, ScriptErrors>
+
 export function ProjectScripts() {
   const [ packageJson, setPackageJson ] = usePackageJson()
 
-  const reservedLifeCycleScripts = [
-    "prepublish", "publish", "postpublish", "prepublishOnly",
-    "prepack", "prepare", "postpack",
-    "preinstall", "install", "postinstall",
-    "preuninstall", "uninstall", "postuninstall",
-    "preversion", "version", "postversion",
-    "pretest", "test", "posttest",
-    "prestop", "stop", "poststop",
-    "prestart", "start", "poststart",
-    "prerestart", "restart", "postrestart",
-  ]
-
-  const reservedLifeCycleScriptsNoPrepost: { name: string, desc: string }[] = [
-    {
-      name: "start",
-      desc: "This script will be run when you run npm start."
-    },
-    {
-      name: "test",
-      desc: "This script will be run when you run npm test."
-    },
-    {
-      name: "install",
-      desc: "This script will be run when you run npm install."
-    },
-    {
-      name: "prepublishOnly",
-      desc: "Runs before package is prepared and packed, only on `npm publish`. This is a good place to put pre-publish checks or tests that you don't want run on local `npm install`."
-    },
-    {
-      name: "prepare",
-      desc: "Runs before package is packed, and on local npm install without any arguments."
-    },
-    {
-      name: "publish",
-      desc: "Run when the package is published."
-    },
-    {
-      name: "stop",
-      desc: "This script will be run when you run npm stop."
-    },
-    {
-      name: "restart",
-      desc: "Runs when the restart command is executed. If there is a restart script defined, these events are run; otherwise, stop and start are both run if present, including their pre and post iterations)"
-    },
-    {
-      name: "version",
-      desc: "This script will be run when you run npm version."
-    },
-    {
-      name: "uninstall",
-      desc: "This script will be run when you run npm uninstall. However, it is deprecated and should not be used. Use preuninstall or postuninstall instead."
-    },
-
-  ]
-
   const scripts = Object.entries(packageJson.scripts ?? {}).map<ScriptsListArray[ number ]>(([ name, command ]) => {
-    const isUserDefined = !reservedLifeCycleScripts.includes(name)
+    const isUserDefined = !(reservedLifeCycleScripts as readonly string[]).includes(name)
     return ({ name, command, userDefined: isUserDefined })
   })
   const toScriptObject = (scripts: { name: string, command: string }[]) => {
@@ -94,12 +40,13 @@ export function ProjectScripts() {
               return "Script name is required"
             if (value.findIndex(s => s.name === script.name) !== index)
               return "Script name must be unique"
-            if (value.find(s => s.name === `pre${ script.name }`))
-              return "This name is reserved for a pre-script of a user defined script"
-            if (value.find(s => s.name === `post${ script.name }`))
-              return "This name is reserved for a post-script of a user defined script"
-            if (script.userDefined && reservedLifeCycleScripts.includes(script.name))
+            if (script.userDefined && (reservedLifeCycleScripts as readonly string[]).includes(script.name))
               return "This name is reserved for life cycle scripts"
+            if (value.find(s => s.userDefined && `pre${ s.name }` === `${ script.name }`))
+              return "This name is reserved for a pre-script of a user defined script"
+            if (value.find(s => s.userDefined && `post${ s.name }` === `${ script.name }`))
+              return "This name is reserved for a post-script of a user defined script"
+
             return undefined
           })(),
           command: (() => {
@@ -121,21 +68,17 @@ export function ProjectScripts() {
     return errors
   }
 
-  const field = useField(scripts, {
+  const field: ScriptFieldState = useField(scripts, {
     validate: validateUserDefinedScripts,
     onSave: (value) => {
       const newScripts = toScriptObject(value)
-      setPackageJson({ scripts: newScripts, })
+      setPackageJson({ scripts: newScripts })
     },
   })
 
   const userDefinedScriptsValue = field.value.filter(script => script.userDefined)
   const userDefinedScriptsIndices = field.value.map((script, index) => script.userDefined ? index : null).filter(index => index !== null) as number[]
   const userDefinedScriptsErrors = field.error && field.error.filter((_, index) => userDefinedScriptsIndices.includes(index))
-
-  const reservedScriptsIndices = reservedLifeCycleScriptsNoPrepost.map(
-    reserved => field.value.findIndex(script => script.name === reserved.name)
-  )
 
   const addUserDefinedScript = () => field.setValue(old => [ ...old, { name: `script-${ field.value.length + 1 }`, command: "bun dev", userDefined: true } ])
   const deleteUserDefinedScript = (index: number) => field.setValue(old => old.filter((_, i) => i !== userDefinedScriptsIndices[ index ]))
@@ -156,8 +99,6 @@ export function ProjectScripts() {
   const { onDragEnd } = useIndexedReorderDrag({
     value: field.value,
     onChange: (_, newIndices) => {
-      console.log("Old", field.value)
-      console.log("New", newIndices)
       field.setValue(old => {
         const reordered = [ ...old ]
         newIndices.forEach((newIndex, oldIndex) => {
@@ -170,6 +111,9 @@ export function ProjectScripts() {
       })
     },
   })
+
+  // console.log('err', field.value)
+  // console.log('err', field.error)
 
   return (
     <div className="flex flex-col gap-12 py-4 pb-20">
@@ -207,52 +151,30 @@ export function ProjectScripts() {
 
       {/* Reserved Life Cycle Scripts */}
       <div className="flex flex-col gap-6">
-        <H2>Life Cycle Scripts</H2>
+        <H2>Lifecycle Script Pipelines</H2>
         <p className="text-fg-2 -mt-4">
           These scripts are predefined by npm and run automatically at specific stages of the package lifecycle. You can customize these scripts to automate tasks such as testing, building, or deploying your project.
         </p>
-        <div className="flex flex-col gap-2">
-          {reservedLifeCycleScriptsNoPrepost.map((reservedScript, index) => {
-            const isSet = field.value.find(script => script.name === reservedScript.name)
-
-            if (!isSet) {
-              return <AddButton
-                key={reservedScript.name}
-                label={<>Add <span className="text-fg-2">{reservedScript.name}</span> script</>}
-                desc={reservedLifeCycleScriptsNoPrepost[ index ].desc}
-                onClick={() => {
-                  field.setValue(old => [ ...old, { name: reservedScript.name, command: "", userDefined: false } ])
-                }}
-              />
-
-            }
-
-            return <ReservedScriptInput
-              key={reservedScript.name}
-              error={field.error && field.error[ reservedScriptsIndices[ index ] ]}
-              savedValue={isSet}
-              valueState={{
-                value: isSet,
-                setValue: (updater) => field.setValue(old => {
-                  const value = resolveUpdater(updater, old[ reservedScriptsIndices[ index ] ])
-                  return old.map((s, i) => i === reservedScriptsIndices[ index ] ? { ...s, ...value } : s)
-                }),
-              }}
-              onDelete={() => {
-                field.setValue(old => old.filter((_, i) => i !== reservedScriptsIndices[ index ]))
-              }}
-              description={reservedLifeCycleScriptsNoPrepost[ index ].desc}
-            />
-          })}
-        </div>
+        <StartScriptInputs field={field} />
+        <TestScriptInputs field={field} />
+        <InstallScriptInputs field={field} />
+        <PublishScriptInputs field={field} />
+        <VersionScriptInputs field={field} />
+        <PackScriptInputs field={field} />
+        <RebuildScriptInputs field={field} />
+        <RestartScriptInputs field={field} />
+        <StopScriptInputs field={field} />
+        <PrepareOnlyScriptInputs field={field} />
       </div>
       {/* Reserved life Cycle Scripts END */}
-
 
     </div>
   )
 }
 
+const H3 = (props: React.ComponentProps<"h3">) => <h3 className={cn("text text-fg-2", props.className)}>{props.children}</h3>
+const H3desc = (props: React.ComponentProps<"p">) => <p className={cn("text-fg-3 text-sm", props.className)}>{props.children}</p>
+const ReservedScriptSection = (props: React.ComponentProps<"div">) => <div className={cn("flex flex-col gap-1", props.className)}>{props.children}</div>
 
 
 function UserDefinedScriptInputList(props: {
@@ -263,9 +185,6 @@ function UserDefinedScriptInputList(props: {
   onChangeScript: (index: number, updater: Updater<{ name: string, command: string }>) => void,
   onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void,
 }) {
-
-
-
   return <>
     <div className="flex flex-col gap-2">
       {props.userValues.map((script, index) => {
@@ -283,19 +202,12 @@ function UserDefinedScriptInputList(props: {
           />
         )
       })}
-      <InputButton
-        onClick={() => props.onAddScript()}
-      >
-        <LucidePlus />
-        Add Script
+      <InputButton onClick={props.onAddScript}>
+        <LucidePlus /> Add Script
       </InputButton>
     </div>
   </>
 }
-
-
-
-
 
 
 function ScriptInput(props: {
@@ -309,7 +221,6 @@ function ScriptInput(props: {
   onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void,
   [ "data-drop-id" ]: string,
 }) {
-
   return (
     <>
       <InputBlock
@@ -357,7 +268,6 @@ function ScriptInput(props: {
             setLabel="Set Repository Type"
             clearable={false}
             error={typeof props.error === "object" ? props.error.command : undefined}
-
           />
         </CollectionInputItemGroup>
         <InputBlockFooter
@@ -365,16 +275,13 @@ function ScriptInput(props: {
           expanded={true}
         >
           <div className="flex">
-            <InputButton
-              onClick={() => {
-              }}
+            <InputButton onClick={() => { }}
               className="h-8 px-4 rounded"
             >
               Add pre{props.valueState.value.name}
             </InputButton>
             <InputButton
-              onClick={() => {
-              }}
+              onClick={() => { }}
               className="h-8 px-4 rounded"
             >
               Add post{props.valueState.value.name}
@@ -388,52 +295,243 @@ function ScriptInput(props: {
 
 
 function ReservedScriptInput(props: {
-  error: undefined | string | { name: string | undefined, command: string | undefined },
-  savedValue: { name: string, command: string },
-  valueState: {
-    value: { name: string, command: string },
-    setValue: (value: Updater<{ name: string, command: string }>) => void,
-  }
-  onDelete: () => void,
-  description: string,
+  field: FieldState<ScriptsListArray, ScriptErrors>,
+  keyword: typeof reservedLifeCycleScripts[ number ],
+  addLabel?: React.ReactNode,
+  inputLabel?: React.ReactNode,
 }) {
-  return <div className="flex flex-col mb-2 starting:opacity-0 transition-opacity duration-300">
-    <InputBlock className="">
+  const script = props.field.value.find(function finder(script) {
+    const res = script.name === props.keyword
+    return res
+  })
 
-      <div className="flex flex-row">
-        <CollectionInputItemGroup
-          className="grow"
-          error={typeof props.error === "string" ? props.error : undefined}
-          single
-        >
-          <SubInput
-            Icon={(iconprops) => {
-              return <div
-                className={cn(iconprops.className, "font-mono flex items-center text-sm pointer-events-none")}
-              >{props.valueState.value.name}:</div>
-            }}
-            value={props.valueState.value.command}
-            placeholder="<script command>"
-            onSetNotUndefined={() => { }}
-            onSetUndefined={() => { }}
-            inputOnChange={(e) => {
-              props.valueState.setValue(old => ({ ...old, command: e.target.value }))
-            }}
-            setLabel="Set Repository Type"
-            clearable={false}
-            error={typeof props.error === "object" ? props.error.command : undefined}
+  const onAddScript = () => { props.field.setValue(old => [ ...old, { name: props.keyword, command: "", userDefined: false } ]) }
+  const error = props.field.error && props.field.error.find(function errFinder(_, index) { return typeof props.field.value[ index ] === "object" ? props.field.value[ index ].name === props.keyword : undefined })
+  const commandValue = script?.command
+  const onCommandChange = (e: React.ChangeEvent<HTMLInputElement, Element>) => {
+    props.field.setValue(old => old.map(s => s.name === props.keyword ? { ...s, command: e.target.value } : s))
+  }
+  const onScriptDelete = () => {
+    props.field.setValue(old => {
+      return old.filter(s => s.name !== props.keyword)
+    })
+  }
 
-          />
-        </CollectionInputItemGroup>
-        <div>
-          <CloseButton onClick={() => { props.onDelete() }} />
-        </div>
-      </div>
-
-
-    </InputBlock>
-    <InputDescription>
-      {props.description}
-    </InputDescription>
-  </div>
+  return <div className="flex flex-col starting:opacity-0 transition-opacity duration-300">
+    <SubInput
+      Icon={(iconprops) => {
+        return <div
+          className={cn(iconprops.className, "font-mono flex items-center text-sm pointer-events-none text-fg-3 w-32")}
+        >{props.inputLabel ?? props.keyword}:</div>
+      }}
+      value={commandValue}
+      placeholder="<script command>"
+      onSetNotUndefined={onAddScript}
+      onSetUndefined={onScriptDelete}
+      inputOnChange={onCommandChange}
+      setLabel="set command"
+      clearable={true}
+      error={typeof error === "object" ? error.command : undefined}
+    />
+  </div >
 }
+
+
+const reservedLifeCycleScripts = [
+  "prepublish", "publish", "postpublish", "prepublishOnly",
+  "prepack", "prepare", "postpack", "preprepare", "postprepare",
+  "preinstall", "install", "postinstall",
+  "preuninstall", "uninstall", "postuninstall",
+  "preversion", "version", "postversion",
+  "pretest", "test", "posttest",
+  "prestop", "stop", "poststop",
+  "prestart", "start", "poststart",
+  "prerestart", "restart", "postrestart",
+] as const
+
+function ReservedScriptPipelineGroup(props: {
+  field: FieldState<ScriptsListArray, ScriptErrors>,
+  members: (typeof reservedLifeCycleScripts)[ number ][],
+  title: React.ReactNode,
+  desc: React.ReactNode,
+}) {
+  return (
+    <ReservedScriptSection>
+      <header>
+        <H3 className="font-mono">{props.title}</H3>
+        <H3desc>{props.desc}</H3desc>
+      </header>
+      <InputBlock>
+        <CollectionInputItemGroup className="grow" error={undefined} single>
+          {props.members.map(memver => {
+            return (
+              <ReservedScriptInput key={memver} field={props.field} keyword={memver} inputLabel={memver} />
+            )
+          })}
+        </CollectionInputItemGroup>
+      </InputBlock>
+      <InputDescription>
+
+      </InputDescription>
+    </ReservedScriptSection>
+  )
+}
+
+
+function StartScriptInputs(props: {
+  field: FieldState<ScriptsListArray, ScriptErrors>,
+}) {
+  return (
+    <ReservedScriptPipelineGroup
+      field={props.field}
+      members={[ "prestart", "start", "poststart" ]}
+      title="npm start"
+      desc="These scripts will be run when you run `npm start` as an entry point to run your program. "
+    />
+  )
+}
+
+function TestScriptInputs(props: { field: FieldState<ScriptsListArray, ScriptErrors>, }) {
+  return (
+    <ReservedScriptPipelineGroup
+      field={props.field}
+      members={[ "pretest", "test", "posttest" ]}
+      title="npm test"
+      desc="These  scripts will be run when you run `npm test`, a standardized command used by tools and CI."
+    />
+  )
+}
+
+function InstallScriptInputs(props: { field: FieldState<ScriptsListArray, ScriptErrors>, }) {
+  return (
+    <ReservedScriptPipelineGroup
+      field={props.field}
+      members={[ "preinstall", "install", "postinstall", "prepublish", "preprepare", "prepare", "postprepare" ]}
+      title="npm install / npm ci"
+      desc="These scripts will be run when you run `npm install` to install dependencies or `npm ci` to install dependencies in a deterministic clean state, such as in CI environments."
+    />
+  )
+}
+
+function PublishScriptInputs(props: { field: FieldState<ScriptsListArray, ScriptErrors>, }) {
+  return (
+    <ReservedScriptPipelineGroup
+      field={props.field}
+      members={[ "prepublishOnly", "prepack", "prepare", "postpack", "publish", "postpublish" ]}
+      title="npm publish"
+      desc="These scripts will be run when you run `npm publish` to publish your package to the npm registry."
+    />
+  )
+}
+
+function VersionScriptInputs(props: { field: FieldState<ScriptsListArray, ScriptErrors>, }) {
+  return (
+    <ReservedScriptPipelineGroup
+      field={props.field}
+      members={[ "preversion", "version", "postversion" ]}
+      title="npm version"
+      desc="These scripts will be run when you run `npm version` to bump the version of your package."
+    />
+  )
+}
+
+function PackScriptInputs(props: { field: FieldState<ScriptsListArray, ScriptErrors>, }) {
+  return (
+    <ReservedScriptPipelineGroup
+      field={props.field}
+      members={[ "prepack", "prepare", "postpack" ]}
+      title="npm pack"
+      desc="These scripts will be run when you run `npm pack` to create a tarball of your package."
+    />
+  )
+}
+
+function RebuildScriptInputs(props: { field: FieldState<ScriptsListArray, ScriptErrors>, }) {
+  return (
+    <ReservedScriptPipelineGroup
+      field={props.field}
+      members={[ "preinstall", "install", "postinstall", "prepare" ]}
+      title="npm rebuild"
+      desc="These scripts will be run when you run `npm rebuild` to rebuild native addons."
+    />
+  )
+}
+
+function RestartScriptInputs(props: { field: FieldState<ScriptsListArray, ScriptErrors>, }) {
+  return (
+    <ReservedScriptPipelineGroup
+      field={props.field}
+      members={[ "prerestart", "restart", "postrestart" ]}
+      title="npm restart"
+      desc="These scripts will be run when you run `npm restart` to restart your program. If `restart` is not defined, `stop` and `start` (and their `pre` and `post` interations) script will be run instead."
+    />
+  )
+}
+
+function StopScriptInputs(props: { field: FieldState<ScriptsListArray, ScriptErrors>, }) {
+  return (
+    <ReservedScriptPipelineGroup
+      field={props.field}
+      members={[ "prestop", "stop", "poststop" ]}
+      title="npm stop"
+      desc="These scripts will be run when you run `npm stop` to stop your program."
+    />
+  )
+}
+
+function PrepareOnlyScriptInputs(props: { field: FieldState<ScriptsListArray, ScriptErrors>, }) {
+  return (
+    <ReservedScriptPipelineGroup
+      field={props.field}
+      members={[ "prepare" ]}
+      title="npm diff / npm cache add"
+      desc="The prepare script will be run when you run `npm diff` to see the changes that will be included in the package, or `npm cache add <tarball file>` to add a tarball to the npm cache. This allows you to run build steps and have the built files included in the package without having to commit them to version control."
+    />
+  )
+}
+
+
+
+
+// function PublishingScriptInputSection(props: {
+//   field: FieldState<ScriptsListArray, ScriptErrors>,
+// }) {
+//   return (
+//     <>
+//       {/* <header>
+//         <H3>Publishing Scripts</H3>
+//         <H3desc>
+//           These scripts are related to the publishing process of the package.
+//         </H3desc>
+//       </header> */}
+//       <ReservedScriptPipelineGroup
+//         field={props.field}
+//         members={[ "prepublishOnly" ]}
+//         whichMemberAsInitiallySet="prepublishOnly"
+//         title="PrepublishOnly"
+//         desc="Runs before package is prepared and packed only in `npm publish`. This allows running the tests one last time to ensure they're in good shape before publishing, without running them on local `npm install`."
+//         scriptLabel="prepublishOnly"
+//       >
+//         <ReservedScriptInput field={props.field} keyword="prepublishOnly" inputLabel="prepublishOnly" />
+//       </ReservedScriptPipelineGroup>
+
+
+
+
+
+
+
+
+//       <ReservedScriptPipelineGroup
+//         field={props.field}
+//         members={[ "prepublish" ]}
+//         whichMemberAsInitiallySet="prepublish"
+//         title="Prepublish"
+//         desc="Deprecated. Runs during `npm ci` and `npm install` but not `npm publish`"
+//         scriptLabel="prepublish"
+//       >
+//         <ReservedScriptInput field={props.field} keyword="prepublish" inputLabel="prepublish" />
+//       </ReservedScriptPipelineGroup>
+//     </>
+//   )
+// }
