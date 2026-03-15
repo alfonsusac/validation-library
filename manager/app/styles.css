@@ -49,7 +49,7 @@
         @apply bg-transparent text-fg-2;
       }
       &:disabled {
-        @apply opacity-0;
+        @apply opacity-25;
       }
     }
   }

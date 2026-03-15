@@ -203,17 +203,15 @@ export function SubInput<T extends string | number | readonly string[] | undefin
 
   const ref = useRef<HTMLInputElement>(null)
   return (
-    <div className="flex gap-1 items-start grow">
-      <props.Icon className="text-fg-4 shrink-0 min-w-4.5 h-8 ml-1" />
+    <div className="flex gap-1 items-stretch grow ">
+      <props.Icon className="text-fg-4 shrink-0 min-w-4.5 ml-1 min-h-8" />
       {props.value === undefined ?
         (props.renderUndefined?.() ??
           <AddButton
             subInput
             onClick={() => {
               props.onSetNotUndefined()
-              setTimeout(() => {
-                ref.current?.focus()
-              }, 0)
+              setTimeout(() => ref.current?.focus(), 0)
             }}
             label={props.setLabel}
           />

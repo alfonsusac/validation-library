@@ -1,20 +1,18 @@
 import { useEffect } from "react"
 import { usePackageJson } from "../../features/package-json-client"
-import { AddButton, CloseButton, CollectionInputItemGroup, H2, InputBlock, InputBlockFooter, InputButton, InputDescription, Label, LucidePlus, SomeSortOfConfirmThing, SomeSortOfConfirmThingWrapper, SubInput, useField, useIndexedReorderDrag, type FieldState } from "../app-ui"
+import { CollectionInputItemGroup, H2, InputBlock, InputBlockFooter, InputButton, InputDescription, LucidePlus, SomeSortOfConfirmThing, SomeSortOfConfirmThingWrapper, SubInput, useField, useIndexedReorderDrag, type FieldState } from "../app-ui"
 import { cn } from "lazy-cn"
 import { useRouter } from "../app-routes"
 import { resolveUpdater, type Updater } from "../../lib/react-store"
 
 type ScriptsListArray = {
-  name: string, command: string, precommand?: string, postcommand?: string,
+  name: string, command: string
   userDefined: boolean,
 }[]
 
 type ScriptErrors = ({
   name: string | undefined,
   command: string | undefined,
-  precommand: string | undefined,
-  postcommand: string | undefined,
 } | undefined)[]
 
 type ScriptFieldState = FieldState<ScriptsListArray, ScriptErrors>
@@ -22,10 +20,12 @@ type ScriptFieldState = FieldState<ScriptsListArray, ScriptErrors>
 export function ProjectScripts() {
   const [ packageJson, setPackageJson ] = usePackageJson()
 
-  const scripts = Object.entries(packageJson.scripts ?? {}).map<ScriptsListArray[ number ]>(([ name, command ]) => {
-    const isUserDefined = !(reservedLifeCycleScripts as readonly string[]).includes(name)
-    return ({ name, command, userDefined: isUserDefined })
-  })
+  const scripts = Object
+    .entries(packageJson.scripts ?? {})
+    .map<ScriptsListArray[ number ]>(([ name, command ]) => {
+      const isUserDefined = !(reservedLifeCycleScripts as readonly string[]).includes(name)
+      return ({ name, command, userDefined: isUserDefined })
+    })
   const toScriptObject = (scripts: { name: string, command: string }[]) => {
     const obj: Record<string, string> = Object.fromEntries(scripts.map(script => [ script.name, script.command ]))
     return obj
@@ -38,15 +38,10 @@ export function ProjectScripts() {
           name: (() => {
             if (!script.name)
               return "Script name is required"
-            if (value.findIndex(s => s.name === script.name) !== index)
+            if (value.filter(s => s.name === script.name).length > 1)
               return "Script name must be unique"
             if (script.userDefined && (reservedLifeCycleScripts as readonly string[]).includes(script.name))
               return "This name is reserved for life cycle scripts"
-            if (value.find(s => s.userDefined && `pre${ s.name }` === `${ script.name }`))
-              return "This name is reserved for a pre-script of a user defined script"
-            if (value.find(s => s.userDefined && `post${ s.name }` === `${ script.name }`))
-              return "This name is reserved for a post-script of a user defined script"
-
             return undefined
           })(),
           command: (() => {
@@ -96,60 +91,34 @@ export function ProjectScripts() {
     return router.addInterruption()
   }, [ field.isChanged ])
 
-  const { onDragEnd } = useIndexedReorderDrag({
-    value: field.value,
-    onChange: (_, newIndices) => {
-      field.setValue(old => {
-        const reordered = [ ...old ]
-        newIndices.forEach((newIndex, oldIndex) => {
-          const oldUserDefinedIndex = userDefinedScriptsIndices[ oldIndex ]
-          const newUserDefinedIndex = userDefinedScriptsIndices[ newIndex ]
-          reordered[ newUserDefinedIndex ] = old[ oldUserDefinedIndex ]
-          // this is the new position of the item that was at oldIndex
-        })
-        return reordered
-      })
-    },
-  })
 
-  // console.log('err', field.value)
-  // console.log('err', field.error)
 
   return (
     <div className="flex flex-col gap-12 py-4 pb-20">
 
-      {/* Unsaved Changes Alert */}
-      <SomeSortOfConfirmThingWrapper shown={field.isChanged}>
-        <SomeSortOfConfirmThing shown={field.isChanged}>
-          <div className="flex gap-2">
-            <button disabled={!field.resettable} onClick={field.reset}
-              className="button py-1.5 px-6 ghost">Discard</button>
-            <button disabled={!field.saveable} onClick={field.save}
-              className="button py-1.5 px-6">Save</button>
-          </div>
-        </SomeSortOfConfirmThing>
-      </SomeSortOfConfirmThingWrapper>
-      {/* Unsaved Changes Alert END */}
+      <UnsavedActionBar
+        isChanged={field.isChanged}
+        resettable={field.resettable}
+        saveable={field.saveable}
+        reset={field.reset}
+        save={field.save}
+      />
 
-      {/* User Defined Scripts */}
       <div className="flex flex-col gap-6">
         <H2>User Defined Scripts</H2>
         <p className="text-fg-2 -mt-4">
           Define custom scripts that can be run using npm. These scripts can be used for various tasks such as building, testing, or deploying your project.
         </p>
         <UserDefinedScriptInputList
+          field={field}
           userValues={userDefinedScriptsValue}
           errors={userDefinedScriptsErrors ?? []}
           onAddScript={addUserDefinedScript}
           onDeleteScript={deleteUserDefinedScript}
           onChangeScript={changeUserDefinedScript}
-          onDragEnd={onDragEnd}
         />
       </div>
-      {/* User Defined Scripts END */}
 
-
-      {/* Reserved Life Cycle Scripts */}
       <div className="flex flex-col gap-6">
         <H2>Lifecycle Script Pipelines</H2>
         <p className="text-fg-2 -mt-4">
@@ -166,7 +135,6 @@ export function ProjectScripts() {
         <StopScriptInputs field={field} />
         <PrepareOnlyScriptInputs field={field} />
       </div>
-      {/* Reserved life Cycle Scripts END */}
 
     </div>
   )
@@ -178,30 +146,47 @@ const ReservedScriptSection = (props: React.ComponentProps<"div">) => <div class
 
 
 function UserDefinedScriptInputList(props: {
+  field: FieldState<ScriptsListArray, ScriptErrors>,
   userValues: ScriptsListArray,
   errors: ScriptErrors,
   onAddScript: () => void,
   onDeleteScript: (index: number) => void,
   onChangeScript: (index: number, updater: Updater<{ name: string, command: string }>) => void,
-  onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void,
 }) {
+
+  const userDefinedValues = props.field.value.filter(script => script.userDefined)
+  const userDefinedValueIndices = props.field.value.map((script, index) => script.userDefined ? index : null).filter(index => index !== null)
+
+  const { onDragEnd } = useIndexedReorderDrag({
+    value: props.field.value,
+    onChange: (_, newIndices) => {
+      props.field.setValue(old => {
+        const reordered = [ ...old ]
+        newIndices.forEach((newIndex, oldIndex) => {
+          const oldUserDefinedIndex = userDefinedValueIndices[ oldIndex ]
+          const newUserDefinedIndex = userDefinedValueIndices[ newIndex ]
+          reordered[ newUserDefinedIndex ] = old[ oldUserDefinedIndex ]
+        })
+        return reordered
+      })
+    },
+  })
+
   return <>
     <div className="flex flex-col gap-2">
-      {props.userValues.map((script, index) => {
+
+      {userDefinedValues.map((udScript, index) => {
         return (
-          <ScriptInput key={index}
-            error={props.errors[ index ]}
-            savedValue={script}
-            valueState={{
-              value: script,
-              setValue: (updater) => props.onChangeScript(index, updater),
-            }}
-            onDelete={() => props.onDeleteScript(index)}
-            onDragEnd={(e) => props.onDragEnd(e)} // can't be dragged 
-            data-drop-id={index.toString()}
+          <UserDefinedScriptInput key={index}
+            canonicalIndex={userDefinedValueIndices[ index ]}
+            field={props.field}
+            script={udScript}
+            data-drop-id={String(index)}
+            onDragEnd={onDragEnd}
           />
         )
       })}
+
       <InputButton onClick={props.onAddScript}>
         <LucidePlus /> Add Script
       </InputButton>
@@ -209,18 +194,100 @@ function UserDefinedScriptInputList(props: {
   </>
 }
 
+function UnsavedActionBar(props: {
+  isChanged: boolean,
+  resettable: boolean,
+  saveable: boolean,
+  reset: () => void,
+  save: () => void,
+}) {
+  return (
+    <SomeSortOfConfirmThingWrapper shown={props.isChanged}>
+      <SomeSortOfConfirmThing shown={props.isChanged}>
+        <div className="flex gap-2">
+          <button disabled={!props.resettable} onClick={props.reset}
+            className="button py-1.5 px-6 ghost">Discard</button>
+          <button disabled={!props.saveable} onClick={props.save}
+            className="button py-1.5 px-6">Save</button>
+        </div>
+      </SomeSortOfConfirmThing>
+    </SomeSortOfConfirmThingWrapper>
+  )
+}
 
-function ScriptInput(props: {
-  error: undefined | string | { name: string | undefined, command: string | undefined },
-  savedValue: { name: string, command: string },
-  valueState: {
-    value: { name: string, command: string },
-    setValue: (value: Updater<{ name: string, command: string }>) => void,
-  }
-  onDelete: () => void,
+
+function UserDefinedScriptInput(props: {
+  field: FieldState<ScriptsListArray, ScriptErrors>,
+  script: ScriptsListArray[ number ],
+  canonicalIndex: number,
   onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void,
   [ "data-drop-id" ]: string,
 }) {
+  const error = props.field.error && props.field.error[ props.canonicalIndex ] ? props.field.error[ props.canonicalIndex ] : undefined
+  const value = props.field.value[ props.canonicalIndex ]
+  const onDelete = () => {
+    props.field.setValue(old => old.filter((_, i) => i !== props.canonicalIndex))
+  }
+  const onNameChange = (e: React.ChangeEvent<HTMLInputElement, Element>) => {
+    props.field.setValue(old => old.map((s, i) => i === props.canonicalIndex ? { ...s, name: e.target.value } : s))
+  }
+  const onCommandChange = (e: React.ChangeEvent<HTMLInputElement, Element>) => {
+    props.field.setValue(old => old.map((s, i) => i === props.canonicalIndex ? { ...s, command: e.target.value } : s))
+  }
+  const nameError = typeof error === "object" ? error.name : undefined
+  const commandError = typeof error === "object" ? error.command : undefined
+
+  const preCommand = props.field.value.find(s => s.name === `pre${ value.name }`)
+  const postCommand = props.field.value.find(s => s.name === `post${ value.name }`)
+  const addPreCommand = () => {
+    if (preCommand) return
+    props.field.setValue(old => [ ...old, { name: `pre${ value.name }`, command: "", userDefined: true } ])
+  }
+  const addPostCommand = () => {
+    if (postCommand) return
+    props.field.setValue(old => [ ...old, { name: `post${ value.name }`, command: "", userDefined: true } ])
+  }
+  const onPreCommandChange = (e: React.ChangeEvent<HTMLInputElement, Element>) => {
+    if (!preCommand) return
+    props.field.setValue(old => old.map(s => s.name === preCommand.name ? { ...s, command: e.target.value } : s))
+  }
+  const onPostCommandChange = (e: React.ChangeEvent<HTMLInputElement, Element>) => {
+    if (!postCommand) return
+    props.field.setValue(old => old.map(s => s.name === postCommand.name ? { ...s, command: e.target.value } : s))
+  }
+  const onRemovePreCommand = () => {
+    if (!preCommand) return
+    props.field.setValue(old => old.filter(s => s.name !== preCommand.name))
+  }
+  const onRemovePostCommand = () => {
+    if (!postCommand) return
+    props.field.setValue(old => old.filter(s => s.name !== postCommand.name))
+  }
+
+  function ArroyTip() {
+    return (
+      <div className="size-2 rotate-45 -translate-y-[0.075rem] translate-x-[0.07rem] origin-top-right absolute top-4 border-t-2 border-r-2 border-fg-4" />
+    )
+  }
+
+  function CurveIcon() {
+    return (
+      <div className="w-6 self-stretch relative flex items-start justify-end">
+        <div className="w-2/3 h-4 absolute rounded-bl-lg border-l-2 border-b-2 border-fg-4" />
+        <ArroyTip />
+      </div>
+    )
+  }
+  function JunctionIcon() {
+    return (
+      <div className="w-6 self-stretch relative flex items-start justify-end">
+        <div className="w-2/3 h-4 absolute rounded-bl-sm border-l-2 border-b-2 border-fg-4" />
+        <ArroyTip />
+        <div className="w-2/3 h-full absolute border-l-2 border-fg-4" />
+      </div>
+    )
+  }
+
   return (
     <>
       <InputBlock
@@ -230,62 +297,82 @@ function ScriptInput(props: {
         data-drop-id={props[ "data-drop-id" ]}
       >
         <CollectionInputItemGroup
-          error={typeof props.error === "string" ? props.error : undefined}
+          error={error}
           single
         >
-          <SubInput
+          <SubInput value={value.name}
             Icon={(iconprops) => {
               return <div
                 className={cn(iconprops.className, "font-mono flex items-center text-sm pointer-events-none")}
               >npm run
               </div>
             }}
-            value={props.valueState.value.name}
             placeholder="<script name>"
-            onSetNotUndefined={() => { }}
-            onSetUndefined={() => {
-              props.onDelete()
-            }}
-            inputOnChange={(e) => {
-              props.valueState.setValue(old => ({ ...old, name: e.target.value }))
-            }}
             setLabel="Set Repository URL"
-            error={typeof props.error === "object" ? props.error.name : undefined}
+            onSetNotUndefined={() => { }}
+            onSetUndefined={onDelete} inputOnChange={onNameChange} error={nameError}
           />
+
+          {/* Command */}
+          {preCommand &&
+            <SubInput value={preCommand.command}
+              Icon={() => {
+                return <div className="flex items-center gap-3 font-mono text-sm h-8 text-fg-3/75 italic">
+                  <JunctionIcon /> pre:
+                </div>
+              }}
+              placeholder="<pre-script command>"
+              onSetNotUndefined={() => { }}
+              onSetUndefined={onRemovePreCommand}
+              inputOnChange={onPreCommandChange}
+              setLabel=""
+              clearable={true} error={undefined}
+            />
+          }
           <SubInput
             Icon={(props) => {
-              return <div
-                className={cn(props.className, "font-mono flex items-center text-sm pointer-events-none")}
-              >npx</div>
+              return (
+                postCommand ? <JunctionIcon /> : <CurveIcon />
+              )
             }}
-            value={props.valueState.value.command}
+            value={value.command}
             placeholder="<script command>"
-            onSetNotUndefined={() => { }}
-            onSetUndefined={() => { }}
-            inputOnChange={(e) => {
-              props.valueState.setValue(old => ({ ...old, command: e.target.value }))
-            }}
             setLabel="Set Repository Type"
+            inputOnChange={onCommandChange}
+            error={commandError}
             clearable={false}
-            error={typeof props.error === "object" ? props.error.command : undefined}
+            onSetNotUndefined={() => { }} onSetUndefined={() => { }}
           />
+          {postCommand && <SubInput
+            Icon={() => {
+              return <div className="flex items-center gap-3 font-mono text-sm h-8 text-fg-3/75 italic">
+                <CurveIcon />post:
+              </div>
+            }}
+            value={postCommand.command}
+            placeholder="<post-script command>"
+            onSetNotUndefined={() => { }}
+            onSetUndefined={onRemovePostCommand}
+            inputOnChange={onPostCommandChange}
+            setLabel=""
+            clearable={true}
+            error={undefined}
+          />}
         </CollectionInputItemGroup>
-        <InputBlockFooter
-          className="justify-end"
-          expanded={true}
-        >
+        <InputBlockFooter className="justify-end" expanded={true}>
           <div className="flex">
-            <InputButton onClick={() => { }}
-              className="h-8 px-4 rounded"
-            >
-              Add pre{props.valueState.value.name}
-            </InputButton>
-            <InputButton
-              onClick={() => { }}
-              className="h-8 px-4 rounded"
-            >
-              Add post{props.valueState.value.name}
-            </InputButton>
+            {!preCommand &&
+              <InputButton disabled={!!preCommand} onClick={addPreCommand} className="h-8 px-4 rounded"  >
+                <LucidePlus />
+                <span className="font-mono">pre{value.name}</span>
+              </InputButton>
+            }
+            {!postCommand &&
+              <InputButton disabled={!!postCommand} onClick={addPostCommand} className="h-8 px-4 rounded">
+                <LucidePlus />
+                <span className="font-mono">post{value.name}</span>
+              </InputButton>
+            }
           </div>
         </InputBlockFooter>
       </InputBlock>
@@ -321,7 +408,7 @@ function ReservedScriptInput(props: {
     <SubInput
       Icon={(iconprops) => {
         return <div
-          className={cn(iconprops.className, "font-mono flex items-center text-sm pointer-events-none text-fg-3 w-32")}
+          className={cn(iconprops.className, "font-mono flex items-center text-sm pointer-events-none text-fg-3 w-32 h-8")}
         >{props.inputLabel ?? props.keyword}:</div>
       }}
       value={commandValue}
