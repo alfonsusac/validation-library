@@ -1,6 +1,6 @@
 import { usePackageJson } from "../../features/package-json-client"
 import { useRouter } from "../app-routes"
-import { AddButton, H2, InputButton } from "../app-ui"
+import { AddButton, H2 } from "../app-ui"
 
 type Dependency = {
   name: string,

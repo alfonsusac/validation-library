@@ -1,6 +1,5 @@
 import { cn } from "lazy-cn"
 import { matchRoute } from "../lib/react-route"
-import { call } from "./app-client"
 import { useQuery } from "../lib/react-store"
 
 export function RoutePage(props: {
@@ -40,14 +39,6 @@ export function RoutePage(props: {
     {props.children}
   </div>
 }
-
-
-
-
-
-// export async function navigate(path: string) {
-//   await call("updateUserSettings", { route: path })
-// }
 
 
 

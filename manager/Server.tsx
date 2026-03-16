@@ -43,7 +43,7 @@ export const startManager = async () => {
     userSettings.cleanup()
     pinger.cleanup()
   })
-
+  
   return server
 }
 
