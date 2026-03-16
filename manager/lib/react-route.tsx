@@ -7,14 +7,16 @@
 // - /package-json/+
 
 export function matchRoute(current: string, path: string) {
+  const [ currpath, currsp ] = current.split("?") 
+  
   if (path.endsWith("/*")) {
     const basePath = path.slice(0, -2)
-    return current === basePath || current.startsWith(basePath + "/")
+    return currpath === basePath || currpath.startsWith(basePath + "/")
   }
   if (path.endsWith("/+")) {
     const basePath = path.slice(0, -1)
-    if (current === basePath) return false
-    return current.startsWith(basePath + "/")
+    if (currpath === basePath) return false
+    return currpath.startsWith(basePath + "/")
   }
-  return current === path
+  return currpath === path
 }

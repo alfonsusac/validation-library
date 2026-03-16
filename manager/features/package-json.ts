@@ -15,6 +15,9 @@ export type PackageJson = {
   } | string,
   dependencies?: Record<string, string>,
   devDependencies?: Record<string, string>,
+  peerDependencies?: Record<string, string>,
+  optionalDependencies?: Record<string, string>,
+  bundleDependencies?: string[] | boolean,
   license?: string,
   author?: string | {
     name: string,

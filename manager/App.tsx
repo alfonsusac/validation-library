@@ -2,8 +2,9 @@ import { newQueryClient, QueryClientProvider } from "./lib/react-store"
 import { usePackageJson } from "./features/package-json-client"
 import { useUserSettings } from "./features/user-settings-client"
 import { ProjectSettings } from "./app/pages/ProjectSettings"
-import { navigate, RoutePage, useRouter } from "./app/app-routes"
+import { RoutePage, useRouter } from "./app/app-routes"
 import { ProjectScripts } from "./app/pages/ProjectScripts"
+import { DependencyPage } from "./app/pages/Dependency"
 
 const qc = newQueryClient()
 import.meta.hot.dispose(() => qc.cleanup())
@@ -39,7 +40,10 @@ function App() {
     overflow-x-hidden mx-auto overflow-y-visible
     ">
       <div className="max-w-xl w-full mx-auto">
-        <RoutePage path="/" classNames={{ hidden: "-translate-x-1/6" }}>
+
+        <RoutePage path="/"
+        // classNames={{ hidden: "-translate-x-1/6" }}
+        >
           <div className="flex flex-col p-4 bg-bg min-h-screen">
             <header className="gri-d sticky top-0 -mt-4 -mx-4 p-6 bg-bg z-50">
               <div className="font-semibold text-sm text-fg-3">Package Manager</div>
@@ -48,36 +52,66 @@ function App() {
 
             <div className="-mx-1 bg-bg-2/50 rounded-xl overflow-hidden">
               <MenuItem
-                title="package.json"
-                description="Edit project settings."
-                onClick={() => router.navigate("/package-json")}
+                title="package.json" description="Edit project settings."
+                onClick={() => router.navigate("/package-json", "forward")}
               />
               <MenuItem
-                title="scripts"
-                description="Edit project scripts."
-                onClick={() => router.navigate("/scripts")}
+                title="Scripts" description="Edit project scripts."
+                onClick={() => router.navigate("/scripts", "forward")}
+              />
+              <MenuItem
+                title="Dependencies" description="Edit project dependencies."
+                onClick={() => router.navigate("/dependencies", "forward")}
               />
             </div>
           </div>
         </RoutePage>
 
-        <RoutePage path="/package-json" classNames={{ hidden: "translate-x-full" }}>
+        <RoutePage path="/package-json"
+        // classNames={{ hidden: "translate-x-full" }}
+        >
           <div className="flex flex-col p-4 bg-bg min-h-screen">
             <SubpageHeader
               title="Project Settings"
-              onBackClick={() => router.navigate("/")}
+              onBackClick={() => router.navigate("/", "backward")}
             />
             <ProjectSettings />
           </div>
         </RoutePage>
 
-        <RoutePage path="/scripts" classNames={{ hidden: "translate-x-full" }}>
+        <RoutePage path="/scripts"
+        // classNames={{ hidden: "translate-x-full" }}
+        >
           <div className="flex flex-col p-4 bg-bg min-h-screen">
             <SubpageHeader
               title="Project Scripts"
-              onBackClick={() => router.navigate("/")}
+              onBackClick={() => router.navigate("/", "backward")}
             />
             <ProjectScripts />
+          </div>
+        </RoutePage>
+
+        <RoutePage path="/dependencies"
+        // classNames={{ hidden: "translate-x-full" }}
+        >
+          <div className="flex flex-col p-4 bg-bg min-h-screen">
+            <SubpageHeader
+              title="Project Dependencies"
+              onBackClick={() => router.navigate("/", "backward")}
+            />
+            <DependencyPage />
+          </div>
+        </RoutePage>
+
+        <RoutePage path="/dependencies/add"
+        // classNames={{ hidden: "translate-x-full" }}
+        >
+          <div className="flex flex-col p-4 bg-bg min-h-screen z-10">
+            <SubpageHeader
+              title="Add Dependency"
+              onBackClick={() => router.navigate("/dependencies", "backward")}
+            />
+            EOEOOEEO
           </div>
         </RoutePage>
 

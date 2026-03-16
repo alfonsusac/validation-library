@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { usePackageJson } from "../../features/package-json-client"
 import { CollectionInputItemGroup, H2, InputBlock, InputBlockFooter, InputButton, InputDescription, LucidePlus, SomeSortOfConfirmThing, SomeSortOfConfirmThingWrapper, SubInput, useField, useIndexedReorderDrag, type FieldState } from "../app-ui"
 import { cn } from "lazy-cn"
@@ -86,9 +86,19 @@ export function ProjectScripts() {
   }
 
   const router = useRouter()
+  const unsavedModalRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!field.isChanged) return
-    return router.addInterruption()
+    return router.addInterruption(() => {
+      unsavedModalRef.current?.animate([
+        { background: "transparent" },
+        { background: "red" },
+        { background: "transparent" },
+      ], {
+        composite: "add",
+        duration: 300,
+      })
+    })
   }, [ field.isChanged ])
 
 
@@ -102,6 +112,7 @@ export function ProjectScripts() {
         saveable={field.saveable}
         reset={field.reset}
         save={field.save}
+        ref={unsavedModalRef}
       />
 
       <div className="flex flex-col gap-6">
@@ -200,10 +211,11 @@ function UnsavedActionBar(props: {
   saveable: boolean,
   reset: () => void,
   save: () => void,
+  ref?: React.Ref<HTMLDivElement>,
 }) {
   return (
     <SomeSortOfConfirmThingWrapper shown={props.isChanged}>
-      <SomeSortOfConfirmThing shown={props.isChanged}>
+      <SomeSortOfConfirmThing shown={props.isChanged} ref={props.ref}>
         <div className="flex gap-2">
           <button disabled={!props.resettable} onClick={props.reset}
             className="button py-1.5 px-6 ghost">Discard</button>
